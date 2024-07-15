@@ -1,0 +1,123 @@
+apply plugin: "com.diffplug.spotless"
+apply plugin: "io.gitlab.arturbosch.detekt"
+apply plugin: "org.jlleitschuh.gradle.ktlint"
+
+// Configure Ktlint plugin
+ktlint {
+    android = true
+    ignoreFailures = true
+    coloredOutput = true
+    reporters {
+        reporter("checkstyle") // For XML reports
+        reporter("html") // For HTML reports
+        reporter("json")  // For JSON reports
+        reporter("sarif") // For SARIF reports
+    }
+}
+
+
+// Configure Detekt plugin
+detekt {
+    // Version of detekt that will be used. When unspecified the latest detekt
+    // version found will be used. Override to stay on the same version.
+    toolVersion = libs.versions.detekt.get()
+
+    // Specify the base path for file paths in the formatted reports.
+    // If not set, all file paths reported will be absolute file path.
+    basePath = projectDir.absolutePath
+
+    parallel = true
+    config.setFrom("$projectDir/../config/detekt/detekt.yml")
+    baseline = file("$projectDir/../config/detekt/baseline.xml")
+    buildUponDefaultConfig = true
+
+    debug = false
+    ignoreFailures = false
+    autoCorrect = true
+
+    // Android: Don't create tasks for the specified build types (e.g. "release")
+    ignoredBuildTypes = ["release"]
+}
+
+// Configure Spotless plugin
+spotless {
+    kotlin {
+        target("**/*.kt")
+        targetExclude("**/.editorconfig") // Ignore .editorconfig file
+        ktlint().setEditorConfigPath("$rootDir/.editorconfig")
+        detekt {
+            config.setFrom("$projectDir/../config/detekt/detekt.yml")
+        }
+    }
+    kotlinGradle {
+        target("**/*.gradle.kts")
+        // Ignore TargetSdk Warning as it can be annoying if we're not ready to upgrade it yet.
+        custom 'removeTargetSdkWarning', {
+            it.replaceAll(~".*targetSdk\\s*=\\s*\\d+.*\\n", "")
+        }
+        ktlint()
+    }
+}
+
+// Run codestyle checks on the preBuild
+afterEvaluate {
+    tasks.named("preBuild") {
+        dependsOn("detekt")
+        dependsOn("ktlintCheck")
+        dependsOn("spotlessCheck")
+    }
+}
+
+// ------------------------------------------------------------
+// Custom gradle tasks to group all the needed codestyle tasks into the "codestyle" group in the Android Studio gradle tab for convenience
+// ------------------------------------------------------------
+
+// Task to run Detekt code analysis
+tasks.register("runDetekt") {
+    description = "Runs Detekt code analysis."
+    group = "codestyle" // Add it to the "codestyle" group in the Gradle tab
+    dependsOn("detekt") // Depend on the default Detekt task
+    doLast {
+        println("Detekt analysis completed.") // Print a message after execution
+    }
+}
+
+// Task to run Ktlint code style check, if we want to see the Ktlint reports
+tasks.register("runKtlintCheck") {
+    description = "Runs Ktlint code style check."
+    group = "codestyle"
+    dependsOn("ktlintCheck") // Depend on the ktlintCheck task
+    doLast {
+        println("Ktlint check completed.")
+    }
+}
+
+// Task to run Ktlint code style formatting
+tasks.register("runktlintFormat") {
+    description = "Runs Ktlint code style formatting."
+    group = "codestyle"
+    dependsOn("ktlintFormat") // Depend on the ktlintFormat task
+    doLast {
+        println("Ktlint check completed.")
+    }
+}
+
+// Task to run Spotless code style check
+tasks.register("runSpotlessCheck") {
+    description = "Runs Spotless code style check."
+    group = "codestyle"
+    dependsOn("spotlessCheck") // Depend on the spotlessCheck task
+    doLast {
+        println("Spotless check completed.")
+    }
+}
+
+// Task to run Spotless code formatting
+tasks.register("runSpotlessFormat") {
+    description = "Runs Spotless code formatting."
+    group = "codestyle" // Add it to a "codestyle" group
+    dependsOn("spotlessApply") // Depend on the spotlessApply task
+    doLast {
+        println("Spotless formatting completed.")
+    }
+}

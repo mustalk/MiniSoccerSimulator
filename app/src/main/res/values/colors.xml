@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_launcher_background">#0288D1</color>
+    <color name="transparent">#00000000</color>
+    <color name="white">#FFFFFF</color>
+    <color name="black">#000000</color>
+    <color name="primary">#039BE5</color>
+    <color name="primary_dark">#0288D1</color>
+    <color name="primary_darker">#01579B</color>
+    <color name="primary_light">#4FC3F7</color>
+    <color name="primary_overlay">#66039BE5</color>
+    <color name="primary_darker_overlay">#6601579B</color>
+    <color name="primary_highlight_overlay">#660D68A3</color>
+    <color name="control_fallback_overlay">#6678909c</color>
+    <color name="window_background">#fcfff6</color>
+    <color name="window_background_night">#FBF9E3</color>
+    <color name="grey_500">#9e9e9e</color>
+
+    <color name="button_overlay">#BEED9500</color>
+    <color name="button_overlay_highlight">#ED9500</color>
+    <color name="qualifier_highlights_highlight">#66EA6905</color>
+    <color name="qualifier_highlight_overlay">#66ED9500</color> <!-- Light yellow highlight -->
+    <color name="black_overlay">#66000000</color>
+    <color name="winning_team_color">#259b24</color>
+    <color name="losing_team_color">#e51c23</color>
+</resources>

@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">MiniSoccerSimulator</string>
+    <string name="content_desc_app_title">Custom Toolbar Title</string>
+</resources>

@@ -1,0 +1,176 @@
+name: Android CI
+
+on:
+  push:
+    branches: [ main, 'release/**', 'feature/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
+
+    steps:
+      # Checkout the repository
+      - name: Checkout
+        uses: actions/checkout@v4
+        # Documentation: Checks out the repository's code for the workflow to execute
+        # See: https://docs.github.com/en/actions/reference/actions#checkout
+
+      # Enable KVM for running Android emulator
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+        # Documentation: Enables Kernel-based Virtual Machine (KVM) for Android emulator acceleration
+        # See: https://developer.android.com/studio/run/emulator-acceleration
+
+      # Set up JDK 17
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+        # Documentation: Sets up JDK 17 for building and testing Java applications
+        # See: https://docs.github.com/en/actions/language-and-framework-guides/using-java-with-github-actions
+
+      # Grant execute permission to Gradlew
+      - name: Grant Execute Permission to Gradlew
+        run: chmod +x ./gradlew
+        # Documentation: Grants execute permission to Gradlew script for Gradle build automation
+        # See: https://docs.gradle.org/current/userguide/gradle_wrapper.html
+
+      # Cache Gradle dependencies
+      - name: Gradle Cache
+        id: gradle-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.gradle/caches/modules-2/files-2.1/
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          fail-on-cache-miss: false
+        # Documentation: Caches Gradle dependencies to speed up subsequent builds
+        # See: https://github.com/actions/cache
+
+      # Notify cache status
+      - name: Notify Gradle Cache Status (Doesn't Exist)
+        if: steps.gradle-cache.outputs.cache-hit != 'true'
+        run: echo "Gradle dependencies cache does not exist."
+
+      - name: Notify Gradle Cache Status (Exists)
+        if: steps.gradle-cache.outputs.cache-hit == 'true'
+        run: echo "Gradle dependencies cache exists."
+
+      # Run Detekt and ktlint checks in parallel
+      - name: Run Detekt and ktlint (Parallel)
+        run: |
+          ./gradlew detekt --parallel &       # Run Detekt in the background
+          ./gradlew ktlintCheck --parallel &  # Run ktlint check in the background
+          wait                                # Wait for both processes to finish
+        # Documentation: Runs Detekt and ktlint checks concurrently to analyze code quality and formatting
+        # See: https://detekt.github.io/detekt/
+        # See: https://github.com/pinterest/ktlint
+
+      # Upload Detekt Report
+      - name: Upload Detekt Report
+        uses: actions/upload-artifact@v4
+        if: always() # Always upload even if the job fails
+        with:
+          name: detekt-report
+          path: app/build/reports/detekt
+        # Documentation: Uploads Detekt reports as artifacts for review
+        # See: https://github.com/actions/upload-artifact
+
+      # Upload ktlint Report
+      - name: Upload ktlint Report
+        uses: actions/upload-artifact@v4
+        if: always() # Always upload even if the job fails
+        with:
+          name: ktlint-report
+          path: app/build/reports/ktlint
+        # Documentation: Uploads ktlint reports as artifacts for review
+        # See: https://github.com/actions/upload-artifact
+
+      # Run Unit Tests
+      - name: Run Unit Tests
+        run: ./gradlew testDebugUnitTest
+        # Documentation: Executes unit tests using Gradle for automated testing
+        # See: https://docs.gradle.org/current/userguide/java_testing.html
+
+      # Upload Unit Test Reports
+      - name: Upload Unit Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: app/build/reports/tests/testDebugUnitTest/
+        # Documentation: Uploads unit test reports as artifacts for analysis
+        # See: https://github.com/actions/upload-artifact
+
+      # Cache AVD (Android Virtual Device)
+      - name: AVD Cache
+        uses: actions/cache@v4
+        id: avd-cache
+        with:
+          path: |
+            ~/.android/avd/*
+            ~/.android/adb*
+          key: avd-api-29
+        # Documentation: Caches Android Virtual Device (AVD) data to optimize emulator startup
+        # See: https://developer.android.com/studio/run/managing-avds.html
+
+      # Setup Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        # Documentation: Sets up Android SDK for building and testing Android apps
+        # See: https://github.com/android-actions/setup-android
+
+      # Add AVD Manager to PATH
+      - name: Add AVD Manager to PATH
+        run: echo "/usr/local/lib/android/sdk/tools/bin" >> $GITHUB_PATH
+        # Documentation: Adds AVD Manager to PATH for Android emulator management
+        # See: https://developer.android.com/studio/command-line/variables.html#path
+
+      # Notify AVD cache status
+      - name: Notify AVD Cache Status (Doesn't Exist)
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        run: echo "AVD cache does not exist."
+
+      - name: Notify AVD Cache Status (Exists)
+        if: steps.avd-cache.outputs.cache-hit == 'true'
+        run: echo "AVD cache exists."
+
+      # Create AVD and Generate Snapshot (if no cache)
+      - name: Create AVD and Generate Snapshot (if no cache)
+        if: steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated AVD snapshot for caching."
+        # Documentation: Creates Android Virtual Device (AVD) and generates snapshot if no cache is available
+        # See: https://github.com/reactivecircus/android-emulator-runner
+
+      # Run Instrumented Tests
+      - name: Run Instrumented Tests
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./gradlew connectedCheck
+        # Documentation: Runs instrumented tests on Android emulator
+        # See: https://developer.android.com/training/testing/unit-testing/instrumented-unit-testing
+
+      # Upload Instrumented Test Reports
+      - name: Upload Instrumented Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: instrumented-test-reports
+          path: app/build/reports/androidTests/connected/debug/
+        # Documentation: Uploads instrumented test reports as artifacts for analysis
+        # See: https://github.com/actions/upload-artifact
