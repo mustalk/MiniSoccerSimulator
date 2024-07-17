@@ -2,17 +2,20 @@ name: Android CI
 
 on:
   push:
-    branches: [ main, 'release/**', 'feature/**' ]
+    branches: [ main, 'release/**', 'feature/**', 'bugfix/**' ]
   pull_request:
     branches: [ main ]
 
 jobs:
-  test:
+  android-ci:
     runs-on: ubuntu-latest
     env:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
 
     steps:
+      - name: Check disk space before build
+        run: df -h
+
       # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,6 +46,13 @@ jobs:
         # Documentation: Grants execute permission to Gradlew script for Gradle build automation
         # See: https://docs.gradle.org/current/userguide/gradle_wrapper.html
 
+      - name: Gradle wrapper setup
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: wrapper
+        # Documentation: Ensures that the Gradle wrapper is set up correctly
+        # See: https://github.com/gradle/gradle-build-action
+
       # Cache Gradle dependencies
       - name: Gradle Cache
         id: gradle-cache
@@ -50,8 +60,7 @@ jobs:
         with:
           path: ~/.gradle/caches/modules-2/files-2.1/
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          fail-on-cache-miss: false
-        # Documentation: Caches Gradle dependencies to speed up subsequent builds
+        # Documentation: Caches Gradle dependencies and wrapper to speed up subsequent builds
         # See: https://github.com/actions/cache
 
       # Notify cache status
@@ -102,6 +111,7 @@ jobs:
       # Upload Unit Test Reports
       - name: Upload Unit Test Reports
         uses: actions/upload-artifact@v4
+        if: always() # Always upload even if the job fails
         with:
           name: unit-test-reports
           path: app/build/reports/tests/testDebugUnitTest/
@@ -132,30 +142,11 @@ jobs:
         # Documentation: Adds AVD Manager to PATH for Android emulator management
         # See: https://developer.android.com/studio/command-line/variables.html#path
 
-      # Notify AVD cache status
-      - name: Notify AVD Cache Status (Doesn't Exist)
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        run: echo "AVD cache does not exist."
+      - name: Check disk space before emulator start
+        run: df -h
 
-      - name: Notify AVD Cache Status (Exists)
-        if: steps.avd-cache.outputs.cache-hit == 'true'
-        run: echo "AVD cache exists."
-
-      # Create AVD and Generate Snapshot (if no cache)
-      - name: Create AVD and Generate Snapshot (if no cache)
-        if: steps.avd-cache.outputs.cache-hit != 'true'
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          force-avd-creation: false
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: false
-          script: echo "Generated AVD snapshot for caching."
-        # Documentation: Creates Android Virtual Device (AVD) and generates snapshot if no cache is available
-        # See: https://github.com/reactivecircus/android-emulator-runner
-
-      # Run Instrumented Tests
-      - name: Run Instrumented Tests
+      # Start emulator and run tests
+      - name: Start Emulator and Run Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
@@ -165,6 +156,17 @@ jobs:
           script: ./gradlew connectedCheck
         # Documentation: Runs instrumented tests on Android emulator
         # See: https://developer.android.com/training/testing/unit-testing/instrumented-unit-testing
+
+      # Kill crashpad_handler processes, to fix the emulator locking issue
+      - name: Kill crashpad_handler processes
+        if: always()
+        run: |
+          pkill -SIGTERM crashpad_handler || true
+          sleep 5
+          pkill -SIGKILL crashpad_handler || true
+        # Documentation: Ensures that any crashpad_handler processes are terminated to avoid locking issues
+        # See: https://github.com/ReactiveCircus/android-emulator-runner/issues/381
+        # and: https://github.com/ReactiveCircus/android-emulator-runner/issues/385
 
       # Upload Instrumented Test Reports
       - name: Upload Instrumented Test Reports
