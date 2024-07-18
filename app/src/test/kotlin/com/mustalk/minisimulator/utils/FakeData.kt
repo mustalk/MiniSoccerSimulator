@@ -4,8 +4,9 @@ import com.mustalk.minisimulator.domain.entities.teams.Team
 import com.mustalk.minisimulator.domain.entities.teams.TeamStats
 
 /**
- * @author by MusTalK on 16/07/2024
+ * Fake data for testing
  *
+ * @author by MusTalK on 16/07/2024
  */
 
 object FakeData {

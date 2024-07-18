@@ -1,6 +1,8 @@
 package com.mustalk.minisimulator.utils
 
 /**
+ * Fake JSON data for testing
+ *
  * @author by MusTalK on 16/07/2024
  */
 
