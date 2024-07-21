@@ -1,4 +1,28 @@
 <resources>
     <string name="app_name">MiniSoccerSimulator</string>
+
+    <string name="round_number">Round %1$d</string>
     <string name="content_desc_app_title">Custom Toolbar Title</string>
+    <string name="content_desc_home_team_icon">Home Team Icon</string>
+    <string name="content_desc_away_team_icon">Away Team Icon</string>
+    <string name="content_desc_match_results_button">Match Results Button</string>
+    <string name="content_desc_standings_button">Standings Button</string>
+    <string name="content_desc_simulate_matches_button">Simulate Matches Button</string>
+    <string name="header_icon_content_description">Winners dialog header icon</string>
+
+    <string name="title_round_match_results">Round Match Results</string>
+
+    <string name="empty_view_text_no_match_data">No match data available yet, hit the</string>
+    <string name="empty_view_text_no_standings_data">No standings data available yet, hit the</string>
+    <string name="empty_view_text_match_results">to switch into the Match Results view!</string>
+    <string name="empty_view_text_standings">to switch into the Group Standings view!</string>
+    <string name="empty_view_text_hit_switch">Hit the</string>
+    <string name="empty_view_text_get_started">to get started!</string>
+
+    <string name="label_home">Home</string>
+    <string name="label_score">Score</string>
+    <string name="label_away">Away</string>
+    <string name="label_score_divider">-</string>
+
+
 </resources>

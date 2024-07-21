@@ -2,7 +2,7 @@ package com.mustalk.minisimulator.domain.usecases.teams
 
 import com.mustalk.minisimulator.domain.standings.GroupStandings
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -43,7 +43,7 @@ class InitializeTeamsUseCaseTest {
      */
     @Test
     fun `invoke calls initializeTeams on group standings`() =
-        runTest {
+        runBlocking {
             // Calls the use case
             initializeTeamsUseCase(groupStandings)
 
