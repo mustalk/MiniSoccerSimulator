@@ -2,10 +2,34 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/nav_graph"
-    app:startDestination="@id/placeholderFragment">
+    app:startDestination="@id/navMatchResultsFragment">
+
+    <fragment
+        android:id="@+id/navMatchResultsFragment"
+        android:name="com.mustalk.minisimulator.presentation.matchresults.MatchResultsFragment"
+        android:label="@string/title_round_match_results">
+        <action
+            android:id="@+id/action_navMatchResultsFragment_to_placeholderFragment"
+            app:destination="@id/placeholderFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:launchSingleTop="true"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim" />
+    </fragment>
 
     <fragment
         android:id="@+id/placeholderFragment"
         android:name="com.mustalk.minisimulator.presentation.placeholder.PlaceholderFragment"
-        android:label="Placeholder" />
+        android:label="Placeholder" >
+        <action
+            android:id="@+id/action_placeholderFragment_to_navMatchResultsFragment"
+            app:destination="@id/navMatchResultsFragment"
+            app:enterAnim="@anim/nav_default_enter_anim"
+            app:exitAnim="@anim/nav_default_exit_anim"
+            app:launchSingleTop="true"
+            app:popEnterAnim="@anim/nav_default_pop_enter_anim"
+            app:popExitAnim="@anim/nav_default_pop_exit_anim"
+            app:popUpTo="@id/navMatchResultsFragment" />
+    </fragment>
 </navigation>
