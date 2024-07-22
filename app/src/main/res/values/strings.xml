@@ -11,6 +11,7 @@
     <string name="header_icon_content_description">Winners dialog header icon</string>
 
     <string name="title_round_match_results">Round Match Results</string>
+    <string name="title_group_standings">Group Standings</string>
 
     <string name="empty_view_text_no_match_data">No match data available yet, hit the</string>
     <string name="empty_view_text_no_standings_data">No standings data available yet, hit the</string>
@@ -24,5 +25,15 @@
     <string name="label_away">Away</string>
     <string name="label_score_divider">-</string>
 
+    <string name="label_position_text">%1$d</string>
+    <string name="label_team_name">Team</string>
 
+    <string name="column_played">Pld</string>
+    <string name="column_wins">W</string>
+    <string name="column_draws">D</string>
+    <string name="column_losses">L</string>
+    <string name="column_gf_ga">Gf-Ga</string>
+    <string name="column_goal_diff">GD</string>
+    <string name="column_points">Pts</string>
+    <string name="action_alright">Alright!</string>
 </resources>

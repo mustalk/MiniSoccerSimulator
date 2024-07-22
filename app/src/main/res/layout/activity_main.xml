@@ -39,6 +39,25 @@
                 android:layout_height="wrap_content"
                 android:layout_gravity="end"
                 android:background="@color/transparent">
+
+                <ImageButton
+                    android:id="@+id/btnMatchResults"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@color/transparent"
+                    android:contentDescription="@string/content_desc_match_results_button"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_logo_icon" />
+
+                <ImageButton
+                    android:id="@+id/btnStandings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@color/transparent"
+                    android:contentDescription="@string/content_desc_standings_button"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_simulate_icon" />
+
                 <ImageButton
                     android:id="@+id/btnSimulateMatches"
                     android:layout_width="wrap_content"

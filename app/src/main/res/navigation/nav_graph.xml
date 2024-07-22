@@ -9,8 +9,8 @@
         android:name="com.mustalk.minisimulator.presentation.matchresults.MatchResultsFragment"
         android:label="@string/title_round_match_results">
         <action
-            android:id="@+id/action_navMatchResultsFragment_to_placeholderFragment"
-            app:destination="@id/placeholderFragment"
+            android:id="@+id/action_navMatchResultsFragment_to_navGroupStandingsFragment"
+            app:destination="@id/navGroupStandingsFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"
             app:launchSingleTop="true"
@@ -19,11 +19,11 @@
     </fragment>
 
     <fragment
-        android:id="@+id/placeholderFragment"
-        android:name="com.mustalk.minisimulator.presentation.placeholder.PlaceholderFragment"
-        android:label="Placeholder" >
+        android:id="@+id/navGroupStandingsFragment"
+        android:name="com.mustalk.minisimulator.presentation.standings.GroupStandingsFragment"
+        android:label="@string/title_group_standings">
         <action
-            android:id="@+id/action_placeholderFragment_to_navMatchResultsFragment"
+            android:id="@+id/action_navGroupStandingsFragment_to_navMatchResultsFragment"
             app:destination="@id/navMatchResultsFragment"
             app:enterAnim="@anim/nav_default_enter_anim"
             app:exitAnim="@anim/nav_default_exit_anim"

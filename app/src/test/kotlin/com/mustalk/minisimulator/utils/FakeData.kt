@@ -13,6 +13,34 @@ import com.mustalk.minisimulator.domain.entities.teams.TeamStats
 object FakeData {
     const val FAKE_NUM_TEAMS = 4
 
+    val fakeTeamsPlayed =
+        listOf(
+            Team(
+                "Team C",
+                6,
+                2131165348,
+                TeamStats(1, 1, 0, 0, 4, 2, 1, 2, 3, true)
+            ),
+            Team(
+                "Team D",
+                3,
+                2131165349,
+                TeamStats(1, 1, 0, 0, 3, 2, 2, 1, 3, true)
+            ),
+            Team(
+                "Team A",
+                9,
+                2131165346,
+                TeamStats(1, 0, 0, 1, 2, 3, 3, -1, 0, true)
+            ),
+            Team(
+                "Team B",
+                4,
+                2131165347,
+                TeamStats(1, 0, 0, 1, 2, 4, 4, -2, 0, true)
+            )
+        )
+
     val fakeTeamsNotPlayed =
         listOf(
             Team("Team A", 9, 0, TeamStats()),
