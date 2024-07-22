@@ -34,8 +34,10 @@ class MatchGeneratorTest {
         // Define the expected pairings for the first round
         val expectedPairings =
             setOf(
-                Pair(teams[0], teams[3]), // Team A vs Team D
-                Pair(teams[1], teams[2]) // Team B vs Team C
+                // Team A vs Team D
+                Pair(teams[0], teams[3]),
+                // Team B vs Team C
+                Pair(teams[1], teams[2])
             )
 
         // Generate the next round matches
@@ -80,8 +82,10 @@ class MatchGeneratorTest {
         // Define the expected pairings for the first round (which should repeat after all rounds)
         val expectedPairings =
             setOf(
-                Pair(teams[0], teams[3]), // Team A vs Team D
-                Pair(teams[1], teams[2]) // Team B vs Team C
+                // Team A vs Team D
+                Pair(teams[0], teams[3]),
+                // Team B vs Team C
+                Pair(teams[1], teams[2])
             )
 
         // Generate all rounds (3 rounds for 4 teams) to cycle through the pairings

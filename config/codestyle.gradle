@@ -5,7 +5,7 @@ apply plugin: "org.jlleitschuh.gradle.ktlint"
 // Configure Ktlint plugin
 ktlint {
     android = true
-    ignoreFailures = true
+    ignoreFailures = false
     coloredOutput = true
     reporters {
         reporter("checkstyle") // For XML reports

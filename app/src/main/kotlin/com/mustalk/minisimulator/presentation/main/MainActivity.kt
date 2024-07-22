@@ -1,7 +1,6 @@
 package com.mustalk.minisimulator.presentation.main
 
 import android.os.Bundle
-import android.view.View
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -48,6 +47,22 @@ class MainActivity : AppCompatActivity() {
             mainViewModel.simulateNextRoundMatches()
         }
 
+        binding.btnStandings.setOnClickListener {
+            showGroupStandings()
+            it.post { ViewUtils.animateViewFlip(it) }
+        }
+
+        binding.btnMatchResults.setOnClickListener {
+            showMatchResults()
+            it.post { ViewUtils.animateViewFlip(it) }
+        }
+
+        // Initially hide btnMatchResults button as it's the default screen
+        ViewUtils.setViewsVisibility(
+            viewsToShow = listOf(binding.btnStandings),
+            viewsToHide = listOf(binding.btnMatchResults)
+        )
+
         // Set the title of the toolbar to the default screen
         setToolbarTitle(getString(R.string.title_round_match_results))
     }
@@ -55,7 +70,7 @@ class MainActivity : AppCompatActivity() {
     private fun initViewModel() {
         // Observe LiveData from the ViewModel to handle the ProgressBar and Toast messages
         mainViewModel.isLoading.observe(this) { isLoading ->
-            setLoadingProgressBar(isLoading)
+            ViewUtils.toggleViewVisibility(binding.contentMain.progressBar, isLoading)
         }
         mainViewModel.errorMessage.observe(this) { errorMessage ->
             errorMessage?.let {
@@ -72,20 +87,30 @@ class MainActivity : AppCompatActivity() {
         navController = navHostFragment.navController
     }
 
+    private fun showGroupStandings() {
+        setToolbarTitle(getString(R.string.title_group_standings))
+
+        // Navigate to GroupStandingsFragment
+        navController.navigate(R.id.action_navMatchResultsFragment_to_navGroupStandingsFragment)
+
+        // Show Match Results button and hide Group Standings button
+        ViewUtils.setViewsVisibility(
+            viewsToShow = listOf(binding.btnMatchResults),
+            viewsToHide = listOf(binding.btnStandings)
+        )
+    }
+
     private fun showMatchResults() {
         setToolbarTitle(getString(R.string.title_round_match_results))
 
         // Navigate to MatchResultsFragment
-        navController.navigate(R.id.action_navMatchResultsFragment_to_placeholderFragment)
-    }
+        navController.navigate(R.id.action_navGroupStandingsFragment_to_navMatchResultsFragment)
 
-    private fun setLoadingProgressBar(isLoading: Boolean) {
-        // Toggle the visibility of the loading progress bar.
-        if (isLoading) {
-            binding.contentMain.progressBar.visibility = View.VISIBLE
-        } else {
-            binding.contentMain.progressBar.visibility = View.GONE
-        }
+        // Show Group Standings button and hide Match Results button
+        ViewUtils.setViewsVisibility(
+            viewsToShow = listOf(binding.btnStandings),
+            viewsToHide = listOf(binding.btnMatchResults)
+        )
     }
 
     private fun setupSupportActionBar(toolbar: Toolbar) {

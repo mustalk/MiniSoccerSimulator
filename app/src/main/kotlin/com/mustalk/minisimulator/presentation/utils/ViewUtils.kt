@@ -111,6 +111,59 @@ object ViewUtils {
     }
 
     /**
+     * Sets the visibility of a given view based on the provided `isShown` flag.
+     *
+     * This function toggles the visibility of the specified `View` object.
+     *
+     * If the `isShown` parameter is `true`, the view will be set to `VISIBLE`.
+     *
+     * If the `isShown` parameter is `false`, the view will be set to `GONE`.
+     *
+     * @param view The `View` whose visibility is to be set.
+     * @param isShown A `Boolean` flag indicating whether the view should be visible (`true`) or hidden (`false`).
+     *
+     */
+    fun toggleViewVisibility(
+        view: View,
+        isShown: Boolean,
+    ) {
+        // Toggle the visibility of the view
+        if (isShown) {
+            view.visibility = View.VISIBLE
+        } else {
+            view.visibility = View.GONE
+        }
+    }
+
+    /**
+     * Sets the visibility of multiple views.
+     *
+     * This function allows you to specify which views should be visible and which should be hidden.
+     *
+     * - `viewsToShow`: A list of views that should be set to `VISIBLE`.
+     * - `viewsToHide`: A list of views that should be set to `GONE`.
+     *
+     * **Usage Example**:
+     * ```
+     * setViewsVisibility(
+     *     viewsToShow = listOf(view1, view2),
+     *     viewsToHide = listOf(view3, view4)
+     * )
+     * ```
+     * This will make `view1` and `view2` visible, while hiding `view3` and `view4`.
+     *
+     * @param viewsToShow A list of views that should be visible. Default is an empty list, which means no views will be made visible.
+     * @param viewsToHide A list of views that should be hidden. Default is an empty list, which means no views will be hidden.
+     */
+    fun setViewsVisibility(
+        viewsToShow: List<View> = emptyList(),
+        viewsToHide: List<View> = emptyList(),
+    ) {
+        viewsToShow.forEach { it.visibility = View.VISIBLE }
+        viewsToHide.forEach { it.visibility = View.GONE }
+    }
+
+    /**
      * Animates a view with a rotation animation.
      *
      * This function applies a rotation animation to the view, loading the animation resource
