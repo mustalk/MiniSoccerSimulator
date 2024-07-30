@@ -8,6 +8,9 @@ local.properties
 .externalNativeBuild
 .cxx
 
+# Firebase configuration file. This file contains sensitive API keys and should not be committed to version control.
+app/google-services.json
+
 # Built application files
 *.apk
 *.ap_

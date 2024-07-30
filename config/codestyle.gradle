@@ -20,7 +20,7 @@ ktlint {
 detekt {
     // Version of detekt that will be used. When unspecified the latest detekt
     // version found will be used. Override to stay on the same version.
-    toolVersion = libs.versions.detekt.get()
+    toolVersion = libs.versions.detekt.plugin.get()
 
     // Specify the base path for file paths in the formatted reports.
     // If not set, all file paths reported will be absolute file path.

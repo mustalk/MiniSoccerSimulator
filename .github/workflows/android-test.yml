@@ -1,13 +1,14 @@
-name: Android CI
+name: Android Test
 
 on:
   push:
-    branches: [ main, 'release/**', 'feature/**', 'bugfix/**' ]
+    branches: [ 'feature/**', 'bugfix/**', 'chore/**', 'docs/**', 'style/**',
+                'refactor/**', 'test/**', 'perf/**', 'ci/**', 'build/**']
   pull_request:
-    branches: [ main ]
+    branches: [ main, release ]
 
 jobs:
-  android-ci:
+  android-test:
     runs-on: ubuntu-latest
     env:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
@@ -102,6 +103,12 @@ jobs:
         # Documentation: Uploads ktlint reports as artifacts for review
         # See: https://github.com/actions/upload-artifact
 
+      # Restore google-services.json file
+      - name: Restore google-services.json
+        run: |
+          echo "${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
+        # Documentation: Restore the google-services.json file needed for the build process
+
       # Run Unit Tests
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
@@ -144,6 +151,7 @@ jobs:
 
       - name: Check disk space before emulator start
         run: df -h
+        # Documentation: Checks available disk space to ensure sufficient space for the emulator
 
       # Start emulator and run tests
       - name: Start Emulator and Run Tests
@@ -176,3 +184,11 @@ jobs:
           path: app/build/reports/androidTests/connected/debug/
         # Documentation: Uploads instrumented test reports as artifacts for analysis
         # See: https://github.com/actions/upload-artifact
+
+      # Clean up restored google-services.json file regardless of the build status
+      - name: Clean up
+        run: |
+          # Check if the file exists before the shred
+          if [ -f app/google-services.json ]; then shred -u app/google-services.json; fi
+        if: always() # Ensures cleanup runs even if previous steps fail
+        # Documentation: Cleans up restored files to maintain security
