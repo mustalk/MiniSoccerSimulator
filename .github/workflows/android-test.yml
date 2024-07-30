@@ -2,7 +2,7 @@ name: Android Test
 
 on:
   push:
-    branches: [ 'feature/**', 'bugfix/**', 'chore/**', 'docs/**', 'style/**',
+    branches: [ 'feature/**', 'bugfix/**', 'chore/**', 'style/**',
                 'refactor/**', 'test/**', 'perf/**', 'ci/**', 'build/**']
   pull_request:
     branches: [ main, release ]
