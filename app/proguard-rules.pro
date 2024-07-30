@@ -97,6 +97,19 @@
 -dontwarn androidx.test.espresso.**
 -keep class androidx.test.espresso.** { *; }
 
+# --- ProGuard Rules for Firebase ---
+
+# Firebase Crashlytics: Preserve necessary classes and members
+-keep class com.google.firebase.crashlytics.** { *; }
+-dontwarn com.google.firebase.crashlytics.**
+
+# Keep the Crashlytics initialization code
+-keep class com.mustalk.minisimulator.MiniSimulatorApp { *; }
+
+# If you use custom keys for Crashlytics uncomment this
+# -keep class com.mustalk.minisimulator.MyCustomKeys { *; }
+# Replace com.mustalk.minisimulator.MyCustomKeys with your custom keys class
+
 # --- Additional Configuration ---
 
 # Preserve application-specific custom rules here if needed

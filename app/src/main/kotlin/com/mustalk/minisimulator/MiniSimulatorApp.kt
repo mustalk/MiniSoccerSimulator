@@ -1,6 +1,9 @@
 package com.mustalk.minisimulator
 
 import android.app.Application
+import com.google.firebase.FirebaseApp
+import com.google.firebase.crashlytics.FirebaseCrashlytics
+import com.mustalk.minisimulator.BuildConfig.DEBUG
 import dagger.hilt.android.HiltAndroidApp
 
 /**
@@ -9,5 +12,13 @@ import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
 class MiniSimulatorApp : Application() {
-    // we don't need to implement anything here at the moment, rather than the @HiltAndroidApp annotation for the Dagger Hilt dependency injection.
+    override fun onCreate() {
+        super.onCreate()
+
+        // Initialize Firebase for non-debug builds
+        if (!DEBUG) {
+            FirebaseApp.initializeApp(this)
+            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(true)
+        }
+    }
 }

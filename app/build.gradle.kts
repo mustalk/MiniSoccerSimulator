@@ -1,9 +1,11 @@
 plugins {
-    id("jacoco") // Apply the JaCoCo plugin for code coverage analysis
+    jacoco // Apply the JaCoCo plugin for code coverage analysis
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
-    id("kotlin-kapt")
+    alias(libs.plugins.google.services)
+    alias(libs.plugins.firebase.crashlytics)
     id("dagger.hilt.android.plugin")
+    id("kotlin-kapt")
 }
 android {
     namespace = "com.mustalk.minisimulator"
@@ -14,7 +16,7 @@ android {
         minSdk = 23
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = "0.1.0"
 
         testInstrumentationRunner = "com.mustalk.minisimulator.HiltTestRunner"
     }
@@ -49,6 +51,7 @@ android {
     }
     buildFeatures {
         viewBinding = true
+        buildConfig = true
     }
 
     // Allow references to generated code
@@ -75,7 +78,14 @@ dependencies {
     implementation(libs.androidx.navigation.ui.ktx) // Navigation ui library for Android
 
     // ------------------------------------------------------------
-    // Networking and Data Serialization
+    // Firebase Libraries
+    // ------------------------------------------------------------
+    implementation(platform(libs.firebase.bom)) // Firebase BOM for managing Firebase versions
+    implementation(libs.firebase.crashlytics) // Firebase crashlytics
+    implementation(libs.firebase.analytics) // Firebase analytics
+
+    // ------------------------------------------------------------
+    // Networking and Data Serialization Libraries
     // ------------------------------------------------------------
     implementation(libs.gson) // Gson library for JSON parsing
 
