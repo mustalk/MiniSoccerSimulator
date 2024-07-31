@@ -14,8 +14,10 @@ jobs:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
 
     steps:
+      # Check disk space before build
       - name: Check disk space before build
         run: df -h
+        # Documentation: Checks available disk space to ensure sufficient space for build and test processes
 
       # Checkout the repository
       - name: Checkout
@@ -47,38 +49,26 @@ jobs:
         # Documentation: Grants execute permission to Gradlew script for Gradle build automation
         # See: https://docs.gradle.org/current/userguide/gradle_wrapper.html
 
+      # Gradle wrapper setup
       - name: Gradle wrapper setup
         uses: gradle/actions/setup-gradle@v3
+        id: setup-gradle
         with:
           gradle-version: wrapper
+          # Only write to the cache for builds on the 'main' and 'release' branches. (Default is 'main' only.)
+          # Builds on other branches will only read existing entries from the cache.
+          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
+          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
         # Documentation: Ensures that the Gradle wrapper is set up correctly
         # See: https://github.com/gradle/gradle-build-action
-
-      # Cache Gradle dependencies
-      - name: Gradle Cache
-        id: gradle-cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.gradle/caches/modules-2/files-2.1/
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-        # Documentation: Caches Gradle dependencies and wrapper to speed up subsequent builds
-        # See: https://github.com/actions/cache
-
-      # Notify cache status
-      - name: Notify Gradle Cache Status (Doesn't Exist)
-        if: steps.gradle-cache.outputs.cache-hit != 'true'
-        run: echo "Gradle dependencies cache does not exist."
-
-      - name: Notify Gradle Cache Status (Exists)
-        if: steps.gradle-cache.outputs.cache-hit == 'true'
-        run: echo "Gradle dependencies cache exists."
+        # And: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md
 
       # Run Detekt and ktlint checks in parallel
       - name: Run Detekt and ktlint (Parallel)
         run: |
-          ./gradlew detekt --parallel &       # Run Detekt in the background
-          ./gradlew ktlintCheck --parallel &  # Run ktlint check in the background
-          wait                                # Wait for both processes to finish
+          ./gradlew detekt --stacktrace --parallel --configuration-cache &        # Run Detekt in the background
+          ./gradlew ktlintCheck --stacktrace --parallel --configuration-cache &   # Run ktlint check in the background
+          wait                                                                    # Wait for both processes to finish
         # Documentation: Runs Detekt and ktlint checks concurrently to analyze code quality and formatting
         # See: https://detekt.github.io/detekt/
         # See: https://github.com/pinterest/ktlint
@@ -109,9 +99,9 @@ jobs:
           echo "${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
         # Documentation: Restore the google-services.json file needed for the build process
 
-      # Run Unit Tests
+      # Run debug and release Unit Tests
       - name: Run Unit Tests
-        run: ./gradlew testDebugUnitTest
+        run: ./gradlew test --configuration-cache
         # Documentation: Executes unit tests using Gradle for automated testing
         # See: https://docs.gradle.org/current/userguide/java_testing.html
 
@@ -121,7 +111,7 @@ jobs:
         if: always() # Always upload even if the job fails
         with:
           name: unit-test-reports
-          path: app/build/reports/tests/testDebugUnitTest/
+          path: app/build/reports/tests/
         # Documentation: Uploads unit test reports as artifacts for analysis
         # See: https://github.com/actions/upload-artifact
 
@@ -153,15 +143,15 @@ jobs:
         run: df -h
         # Documentation: Checks available disk space to ensure sufficient space for the emulator
 
-      # Start emulator and run tests
+      # Start emulator with snapshot enabled and run tests
       - name: Start Emulator and Run Tests
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 29
           force-avd-creation: false
-          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          emulator-options: -snapshot avd-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: ./gradlew connectedCheck
+          script: ./gradlew connectedCheck --configuration-cache
         # Documentation: Runs instrumented tests on Android emulator
         # See: https://developer.android.com/training/testing/unit-testing/instrumented-unit-testing
 

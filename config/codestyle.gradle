@@ -51,20 +51,21 @@ spotless {
     }
     kotlinGradle {
         target("**/*.gradle.kts")
-        // Ignore TargetSdk Warning as it can be annoying if we're not ready to upgrade it yet.
-        custom 'removeTargetSdkWarning', {
-            it.replaceAll(~".*targetSdk\\s*=\\s*\\d+.*\\n", "")
-        }
+        target("**/*.gradle")
         ktlint()
     }
 }
 
-// Run codestyle checks on the preBuild
+// Run codestyle checks on the preBuild for non-release builds
 afterEvaluate {
-    tasks.named("preBuild") {
-        dependsOn("detekt")
-        dependsOn("ktlintCheck")
-        dependsOn("spotlessCheck")
+    android.applicationVariants.all { variant ->
+        if (variant.buildType.name == "debug") {
+            tasks.named("preBuild") {
+                dependsOn("detekt")
+                dependsOn("ktlintCheck")
+                dependsOn("spotlessCheck")
+            }
+        }
     }
 }
 
