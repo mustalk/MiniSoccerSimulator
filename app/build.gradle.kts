@@ -1,3 +1,6 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     jacoco // Apply the JaCoCo plugin for code coverage analysis
     alias(libs.plugins.android.application)
@@ -8,6 +11,52 @@ plugins {
     id("kotlin-kapt")
 }
 android {
+
+    val keystoreProperties = Properties()
+    // Check if keystore.properties exists in the root project directory, where we store the keystore credentials (not pushed to Git)
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    if (keystorePropertiesFile.exists()) {
+        keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+    } else {
+        // Handle the case where keystore.properties is missing (eg. Running on GitHub Actions)
+        println("Info: keystore.properties not found! Checking for GitHub Actions environment variables.")
+
+        // Set keystoreProperties from GitHub Actions environment variables
+        System.getenv("STORE_FILE")?.let { keystoreProperties["storeFile"] = it }
+        System.getenv("STORE_PASSWORD")?.let { keystoreProperties["storePassword"] = it }
+        System.getenv("KEY_ALIAS")?.let { keystoreProperties["keyAlias"] = it }
+        System.getenv("KEY_PASSWORD")?.let { keystoreProperties["keyPassword"] = it }
+    }
+
+    // Initialize isValidConfig
+    var isValidConfig = false
+
+    // Configure signing configs with keystore credentials we got from keystore.properties / GitHub Actions environment variables
+    signingConfigs {
+        create("release") {
+            val storeFilePath = keystoreProperties["storeFile"] as String? ?: ""
+            val storePasswordProp = keystoreProperties["storePassword"] as String? ?: ""
+            val keyAliasProp = keystoreProperties["keyAlias"] as String? ?: ""
+            val keyPasswordProp = keystoreProperties["keyPassword"] as String? ?: ""
+
+            isValidConfig =
+                storeFilePath.isNotBlank() &&
+                storePasswordProp.isNotBlank() &&
+                keyAliasProp.isNotBlank() &&
+                keyPasswordProp.isNotBlank()
+
+            if (isValidConfig) {
+                println("Info: Keystore information restored! Setting up signing configuration...")
+                storeFile = file(storeFilePath)
+                storePassword = storePasswordProp
+                keyAlias = keyAliasProp
+                keyPassword = keyPasswordProp
+            } else {
+                println("Info: Keystore information not provided! Skipping signing configuration.")
+            }
+        }
+    }
+
     namespace = "com.mustalk.minisimulator"
     compileSdk = 34
 
@@ -35,6 +84,9 @@ android {
 
         release {
             isMinifyEnabled = true
+            if (isValidConfig) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
