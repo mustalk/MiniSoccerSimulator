@@ -1,11 +1,47 @@
+# Android Test Workflow
+
+# This workflow automates the testing process for Android projects. It is designed to run tests on specific branches and pull requests,
+#   ensuring code quality and preventing regressions.
+
+# Reasoning and Benefits:
+
+# Targeted Execution: Tests are only executed on the `main`, `release`, and development branches (following specific naming conventions),
+#   as well as pull requests targeting the `release` branch. This prevents unnecessary test runs on branches that might not require
+#   testing, saving resources, and providing a developer-friendly CI process.
+
+# Tests are executed only in the following scenarios:
+#  - Pushes to the `main` or `release` branch.
+#  - Pull requests targeting the`release` branch.
+#  - Pushes to development branches if there are no open PRs targeting the `release` branch.
+
+# Enforced Branch Naming: By specifying branch patterns, the workflow encourages developers to follow consistent naming conventions,
+#   leading to a more organized and manageable repository.
+
+# Conditional PR Testing: For pull requests from development branches, tests are only run if there is an open pull request targeting
+#   the `release` branch. This helps to avoid redundant CI runs and ensures that changes are validated against the latest `release`
+#   candidate before being merged.
+
+# Organized Workflow: Composite actions are used to encapsulate common tasks, improving workflow readability and maintainability.
+#   This also enhances the CI run logs by grouping related steps, making it easier to follow the workflow execution, debug issues,
+#   and track run times for optimization purposes.
+
+# Clear Documentation: Each step includes a descriptive name and comment to explain its purpose.
+
 name: Android Test
 
+# Trigger workflow on push to specified branches and pull requests to release
 on:
   push:
-    branches: [ 'feature/**', 'bugfix/**', 'chore/**', 'style/**',
-                'refactor/**', 'test/**', 'perf/**', 'ci/**', 'build/**']
+    branches: [ main, release, 'feature/**', 'bugfix/**', 'chore/**', 'style/**',
+                'refactor/**', 'test/**', 'perf/**', 'ci/**', 'build/**',
+                'hotfix/**', 'experiment/**']
   pull_request:
-    branches: [ main, release ]
+    branches: [ release ]
+
+# Grant read permissions to pull requests
+permissions:
+  contents: write
+  pull-requests: read
 
 jobs:
   android-test:
@@ -14,171 +50,75 @@ jobs:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
 
     steps:
-      # Check disk space before build
-      - name: Check disk space before build
-        run: df -h
-        # Documentation: Checks available disk space to ensure sufficient space for build and test processes
-
       # Checkout the repository
       - name: Checkout
         uses: actions/checkout@v4
-        # Documentation: Checks out the repository's code for the workflow to execute
-        # See: https://docs.github.com/en/actions/reference/actions#checkout
 
-      # Enable KVM for running Android emulator
-      - name: Enable KVM
+      # Check for open PRs targeting the release branch (only if not on main or release branch)
+      - name: Check Open PRs
+        if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release'
+        uses: actions/github-script@v7
+        id: check-prs
+        with:
+          script: |
+            const prs = await github.rest.pulls.list({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              head: context.ref,
+              base: 'release'
+            });
+            core.setOutput('has_open_pr', prs.data.length > 0 ? 'true' : 'false');
+
+      # Set test flag based on branch and PR status
+      # Runs on main/release, or PRs with open PR to release, or if no open PR has been found
+      - name: Set Test Condition
+        id: set-test-condition
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-        # Documentation: Enables Kernel-based Virtual Machine (KVM) for Android emulator acceleration
-        # See: https://developer.android.com/studio/run/emulator-acceleration
+          if [[ "${GITHUB_REF}" == "refs/heads/main" || "${GITHUB_REF}" == "refs/heads/release" ||
+                ( "${GITHUB_EVENT_NAME}" == "pull_request" && "${{ steps.check-prs.outputs.has_open_pr }}" == "true" ) ||
+                "${{ steps.check-prs.outputs.has_open_pr }}" == "false"
+          ]]; then
+              echo "RUN_TESTS=true" >> $GITHUB_ENV
+          else
+              echo "RUN_TESTS=false" >> $GITHUB_ENV
+          fi
+        shell: bash
 
-      # Set up JDK 17
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
+      # Sets up the required JDK and Gradle environment for the project.
+      - name: Setup JDK and Gradle
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/setup/gradle-java
         with:
-          java-version: '17'
-          distribution: 'temurin'
-        # Documentation: Sets up JDK 17 for building and testing Java applications
-        # See: https://docs.github.com/en/actions/language-and-framework-guides/using-java-with-github-actions
+          GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
-      # Grant execute permission to Gradlew
-      - name: Grant Execute Permission to Gradlew
-        run: chmod +x ./gradlew
-        # Documentation: Grants execute permission to Gradlew script for Gradle build automation
-        # See: https://docs.gradle.org/current/userguide/gradle_wrapper.html
+      # Performs static code analysis using Detekt and Ktlint.
+      - name: Code Analysis
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/execute/code-analysis
 
-      # Gradle wrapper setup
-      - name: Gradle wrapper setup
-        uses: gradle/actions/setup-gradle@v3
-        id: setup-gradle
+      # Restores the google-services.json file needed for Firebase and other Google services.
+      - name: Restore Google Services
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/manage/gservices/restore
         with:
-          gradle-version: wrapper
-          # Only write to the cache for builds on the 'main' and 'release' branches. (Default is 'main' only.)
-          # Builds on other branches will only read existing entries from the cache.
-          cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
-          cache-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
-        # Documentation: Ensures that the Gradle wrapper is set up correctly
-        # See: https://github.com/gradle/gradle-build-action
-        # And: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md
+          APP_GOOGLE_SERVICES_JSON_B64: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
 
-      # Run Detekt and ktlint checks in parallel
-      - name: Run Detekt and ktlint (Parallel)
-        run: |
-          ./gradlew detekt --stacktrace --parallel --configuration-cache &        # Run Detekt in the background
-          ./gradlew ktlintCheck --stacktrace --parallel --configuration-cache &   # Run ktlint check in the background
-          wait                                                                    # Wait for both processes to finish
-        # Documentation: Runs Detekt and ktlint checks concurrently to analyze code quality and formatting
-        # See: https://detekt.github.io/detekt/
-        # See: https://github.com/pinterest/ktlint
+      # Runs unit tests and uploads test reports.
+      - name: Execute Unit Tests
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/execute/unit-tests
 
-      # Upload Detekt Report
-      - name: Upload Detekt Report
-        uses: actions/upload-artifact@v4
-        if: always() # Always upload even if the job fails
-        with:
-          name: detekt-report
-          path: app/build/reports/detekt
-        # Documentation: Uploads Detekt reports as artifacts for review
-        # See: https://github.com/actions/upload-artifact
-
-      # Upload ktlint Report
-      - name: Upload ktlint Report
-        uses: actions/upload-artifact@v4
-        if: always() # Always upload even if the job fails
-        with:
-          name: ktlint-report
-          path: app/build/reports/ktlint
-        # Documentation: Uploads ktlint reports as artifacts for review
-        # See: https://github.com/actions/upload-artifact
-
-      # Restore google-services.json file
-      - name: Restore google-services.json
-        run: |
-          echo "${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
-        # Documentation: Restore the google-services.json file needed for the build process
-
-      # Run debug and release Unit Tests
-      - name: Run Unit Tests
-        run: ./gradlew test --configuration-cache
-        # Documentation: Executes unit tests using Gradle for automated testing
-        # See: https://docs.gradle.org/current/userguide/java_testing.html
-
-      # Upload Unit Test Reports
-      - name: Upload Unit Test Reports
-        uses: actions/upload-artifact@v4
-        if: always() # Always upload even if the job fails
-        with:
-          name: unit-test-reports
-          path: app/build/reports/tests/
-        # Documentation: Uploads unit test reports as artifacts for analysis
-        # See: https://github.com/actions/upload-artifact
-
-      # Cache AVD (Android Virtual Device)
-      - name: AVD Cache
-        uses: actions/cache@v4
-        id: avd-cache
-        with:
-          path: |
-            ~/.android/avd/*
-            ~/.android/adb*
-          key: avd-api-29
-        # Documentation: Caches Android Virtual Device (AVD) data to optimize emulator startup
-        # See: https://developer.android.com/studio/run/managing-avds.html
-
-      # Setup Android SDK
+      # Sets up the Android SDK and AVD for running UI tests.
       - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-        # Documentation: Sets up Android SDK for building and testing Android apps
-        # See: https://github.com/android-actions/setup-android
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/setup/avd-sdk
 
-      # Add AVD Manager to PATH
-      - name: Add AVD Manager to PATH
-        run: echo "/usr/local/lib/android/sdk/tools/bin" >> $GITHUB_PATH
-        # Documentation: Adds AVD Manager to PATH for Android emulator management
-        # See: https://developer.android.com/studio/command-line/variables.html#path
+      # Runs UI tests on the configured Android emulator and uploads test reports.
+      - name: Execute UI Tests
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/execute/ui-tests
 
-      - name: Check disk space before emulator start
-        run: df -h
-        # Documentation: Checks available disk space to ensure sufficient space for the emulator
-
-      # Start emulator with snapshot enabled and run tests
-      - name: Start Emulator and Run Tests
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 29
-          force-avd-creation: false
-          emulator-options: -snapshot avd-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          disable-animations: true
-          script: ./gradlew connectedCheck --configuration-cache
-        # Documentation: Runs instrumented tests on Android emulator
-        # See: https://developer.android.com/training/testing/unit-testing/instrumented-unit-testing
-
-      # Kill crashpad_handler processes, to fix the emulator locking issue
-      - name: Kill crashpad_handler processes
-        if: always()
-        run: |
-          pkill -SIGTERM crashpad_handler || true
-          sleep 5
-          pkill -SIGKILL crashpad_handler || true
-        # Documentation: Ensures that any crashpad_handler processes are terminated to avoid locking issues
-        # See: https://github.com/ReactiveCircus/android-emulator-runner/issues/381
-        # and: https://github.com/ReactiveCircus/android-emulator-runner/issues/385
-
-      # Upload Instrumented Test Reports
-      - name: Upload Instrumented Test Reports
-        uses: actions/upload-artifact@v4
-        with:
-          name: instrumented-test-reports
-          path: app/build/reports/androidTests/connected/debug/
-        # Documentation: Uploads instrumented test reports as artifacts for analysis
-        # See: https://github.com/actions/upload-artifact
-
-      # Clean up restored google-services.json file regardless of the build status
-      - name: Clean up
-        run: |
-          # Check if the file exists before the shred
-          if [ -f app/google-services.json ]; then shred -u app/google-services.json; fi
-        if: always() # Ensures cleanup runs even if previous steps fail
-        # Documentation: Cleans up restored files to maintain security
+      # Cleans up the google-services.json file after tests are complete.
+      - name: Cleanup Google Services
+        if: env.RUN_TESTS == 'true'
+        uses: ./.github/actions/manage/gservices/cleanup

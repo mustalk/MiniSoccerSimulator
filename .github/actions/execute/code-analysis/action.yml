@@ -1,0 +1,28 @@
+name: 'Code analysis'
+description: 'Run code analysis and upload reports'
+
+runs:
+  using: 'composite'
+  steps:
+    # Run Detekt and ktlint checks in parallel
+    - name: Run Detekt and ktlint (Parallel)
+      run: |
+        ./gradlew detekt --stacktrace --parallel --configuration-cache &        # Run Detekt in the background
+        ./gradlew ktlintCheck --stacktrace --parallel --configuration-cache &   # Run ktlint check in the background
+        wait                                                                    # Wait for both processes to finish
+      shell: bash
+      # Documentation: Runs Detekt and ktlint checks concurrently to analyze code quality and formatting
+      # See: https://detekt.github.io/detekt/
+      # See: https://github.com/pinterest/ktlint
+
+    # Upload Detekt & ktlint Report
+    - name: Upload Reports
+      uses: actions/upload-artifact@v4
+      if: always() # Always upload even if the job fails
+      with:
+        name: static-analysis-reports
+        path: |
+          app/build/reports/detekt
+          app/build/reports/ktlint
+      # Documentation: Uploads Detekt and Ktlint reports as artifacts for review
+      # See: https://github.com/actions/upload-artifact
