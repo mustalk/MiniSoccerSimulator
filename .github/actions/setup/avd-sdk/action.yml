@@ -1,0 +1,42 @@
+name: 'Setup android sdk'
+description: 'Setup avd and android sdk'
+
+runs:
+  using: 'composite'
+  steps:
+    # Enable KVM for running Android emulator
+    - name: Enable KVM
+      run: |
+        echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger --name-match=kvm
+      shell: bash
+      # Documentation: Enables Kernel-based Virtual Machine (KVM) for Android emulator acceleration
+      # See: https://developer.android.com/studio/run/emulator-acceleration
+
+    # Cache AVD (Android Virtual Device)
+    - name: AVD Cache
+      uses: actions/cache@v4
+      id: avd-cache
+      with:
+        path: |
+          ~/.android/avd/*
+          ~/.android/adb*
+        key: avd-api-29
+      # Documentation: Caches Android Virtual Device (AVD) data to optimize emulator startup
+      # See: https://developer.android.com/studio/run/managing-avds.html
+
+    # Setup Android SDK
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+      # Documentation: Sets up Android SDK for building and testing Android apps
+      # See: https://github.com/android-actions/setup-android
+
+    # Add AVD Manager to PATH
+    - name: Add AVD Manager to PATH
+      run: echo "/usr/local/lib/android/sdk/tools/bin" >> $GITHUB_PATH
+      shell: bash
+      # Documentation: Adds AVD Manager to PATH for Android emulator management
+      # See: https://developer.android.com/studio/command-line/variables.html#path
+
+

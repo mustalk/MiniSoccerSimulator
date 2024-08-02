@@ -1,0 +1,17 @@
+name: 'Restore Google Services'
+description: 'Restore google-services.json file'
+
+inputs:
+  APP_GOOGLE_SERVICES_JSON_B64:
+    description: 'Base64 encoded google-services.json'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Restore google-services.json file
+    - name: Restore google-services.json
+      run: |
+        echo "${{ inputs.APP_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
+      shell: bash
+      # Documentation: Restore the google-services.json file needed for the build process

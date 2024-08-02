@@ -1,0 +1,57 @@
+name: 'Setup jdk and gradle'
+description: 'Runs the main android-test workflow steps if the condition is met'
+
+inputs:
+  GRADLE_ENCRYPTION_KEY:
+    description: 'Gradle encryption key'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    # Check disk space before build
+    - name: Check disk space before build
+      run: df -h
+      shell: bash
+      # Documentation: Checks available disk space to ensure sufficient space for build and test processes
+
+    # Set up JDK 17
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+      # Documentation: Sets up JDK 17 for building and testing Java applications
+      # See: https://docs.github.com/en/actions/language-and-framework-guides/using-java-with-github-actions
+
+    # Grant execute permission to Gradlew
+    - name: Grant Execute Permission to Gradlew
+      run: chmod +x ./gradlew
+      shell: bash
+      # Documentation: Grants execute permission to Gradlew script for Gradle build automation
+      # See: https://docs.gradle.org/current/userguide/gradle_wrapper.html
+
+    # Gradle wrapper setup
+    - name: Gradle wrapper setup
+      uses: gradle/actions/setup-gradle@v3
+      id: setup-gradle
+      with:
+        gradle-version: wrapper
+        # Only write to the cache for builds on the 'main' and 'release' branches. (Default is 'main' only.)
+        # Builds on other branches will only read existing entries from the cache.
+        # (disabled until a first successful run on 'main' or 'release' is cached. This ensures PR builds can create/access the cache initially.)
+        cache-read-only: false #${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
+        cache-encryption-key: ${{ inputs.GRADLE_ENCRYPTION_KEY }}
+      # Documentation: Ensures that the Gradle wrapper is set up correctly
+      # See: https://github.com/gradle/gradle-build-action
+      # And: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md
+
+    # Log to check cache availability
+    - name: Check Cache Status
+      run: |
+        if [ -d ~/.gradle/caches ]; then
+          echo "Gradle cache exists"
+        else
+          echo "Gradle cache missing"
+        fi
+      shell: bash

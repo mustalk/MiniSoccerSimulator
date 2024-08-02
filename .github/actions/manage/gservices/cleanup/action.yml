@@ -1,0 +1,15 @@
+name: 'Cleanup Google Services'
+description: 'Cleanup restored google-services.json file'
+
+runs:
+  using: 'composite'
+  steps:
+    # Clean up restored google-services.json file regardless of the build status
+    - name: Clean up
+      run: |
+        # Check if the file exists before the shred
+        if [ -f app/google-services.json ]; then shred -u app/google-services.json; fi
+      if: always() # Ensures cleanup runs even if previous steps fail
+      shell: bash
+      # Documentation: Cleans up restored files to maintain security
+

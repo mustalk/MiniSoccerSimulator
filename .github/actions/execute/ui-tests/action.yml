@@ -1,0 +1,43 @@
+name: 'Execute UI Tests'
+description: 'Setup the emulator, run instrumented tests and upload the generated reports'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check disk space before emulator start
+      run: df -h
+      shell: bash
+      # Documentation: Checks available disk space to ensure sufficient space for the emulator
+
+    # Start emulator with snapshot enabled and run tests
+    - name: Start Emulator and Run Tests
+      uses: reactivecircus/android-emulator-runner@v2
+      with:
+        api-level: 29
+        force-avd-creation: false
+        emulator-options: -snapshot avd-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+        disable-animations: true
+        script: ./gradlew connectedCheck --configuration-cache
+      # Documentation: Runs instrumented tests on Android emulator
+      # See: https://developer.android.com/training/testing/unit-testing/instrumented-unit-testing
+
+    # Kill crashpad_handler processes, to fix the emulator locking issue
+    - name: Kill crashpad_handler processes
+      if: always()
+      run: |
+        pkill -SIGTERM crashpad_handler || true
+        sleep 5
+        pkill -SIGKILL crashpad_handler || true
+      shell: bash
+      # Documentation: Ensures that any crashpad_handler processes are terminated to avoid locking issues
+      # See: https://github.com/ReactiveCircus/android-emulator-runner/issues/381
+      # and: https://github.com/ReactiveCircus/android-emulator-runner/issues/385
+
+    # Upload Instrumented Test Reports
+    - name: Upload Instrumented Test Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: instrumented-test-reports
+        path: app/build/reports/androidTests/connected/debug/
+      # Documentation: Uploads instrumented test reports as artifacts for analysis
+      # See: https://github.com/actions/upload-artifact

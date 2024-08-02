@@ -1,0 +1,22 @@
+name: 'Execute unit tests'
+description: 'Execute debug and release unit tests and uploads the generated reports'
+
+runs:
+  using: "composite"
+  steps:
+    # Run Debug and Release Unit Tests
+    - name: Run Unit Tests
+      run: ./gradlew test --configuration-cache
+      shell: bash
+      # Documentation: Executes unit tests using Gradle for automated testing
+      # See: https://docs.gradle.org/current/userguide/java_testing.html
+
+    # Upload Unit Test Reports
+    - name: Upload Unit Test Reports
+      uses: actions/upload-artifact@v4
+      if: always() # Always upload even if the job fails
+      with:
+        name: unit-test-reports
+        path: app/build/reports/tests/
+      # Documentation: Uploads unit test reports as artifacts for analysis
+      # See: https://github.com/actions/upload-artifact
