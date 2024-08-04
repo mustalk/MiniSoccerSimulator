@@ -14,6 +14,7 @@ app/google-services.json
 # Ignore CI-generated files
 fingerprint.fpr
 git_env.sh
+.env
 
 # Built application files
 *.apk

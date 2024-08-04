@@ -7,11 +7,15 @@
 # Enable strict mode
 set -euo pipefail
 
-set -x
-
 # Function to restore execute permissions to scripts
 restore_script_permissions() {
-    chmod +x .github/scripts/*/*.sh
+    if [[ -d ".github/scripts" ]]; then
+        chmod +x .github/scripts/*/*.sh
+
+        if [[ -d ".github/scripts/*/*" ]]; then
+            chmod +x .github/scripts/*/*/*.sh
+        fi
+    fi
 }
 
 # Function to set failure output into env. variables, to be used by next workflow steps
@@ -47,16 +51,28 @@ echo "Starting rebase of $RELEASE_BRANCH onto $MAIN_BRANCH ..."
 # Fetch the latest changes from the remote repository
 git fetch "$REMOTE_NAME" && echo "Successfully fetched changes from $REMOTE_NAME"
 
-git status
+# Perform a dry run of git clean to see which files would be removed
+git clean -fd --dry-run
 
-# Perform hard reset, ensure we have a clean repo before we start the merge
-git reset --hard
+# Ensure a clean working directory, on our CI environment
+git reset --hard HEAD
 
-# Checkout the main branch and pull the latest changes
-git checkout "$MAIN_BRANCH"
-git pull "$REMOTE_NAME" "$MAIN_BRANCH" && echo "Successfully pulled changes from $REMOTE_NAME/$MAIN_BRANCH"
+# Remove untracked files and directories from the working directory (if present in any scenario)
+git clean -fd
 
-# Checkout the release branch
+# Checkout the release branch and ensure it tracks the remote branch
+git checkout --force -B "$RELEASE_BRANCH" "$REMOTE_NAME/$RELEASE_BRANCH"
+
+# Ensure the branch is up to date
+git pull "$REMOTE_NAME" "$RELEASE_BRANCH"
+
+# Checkout the main branch and ensure it tracks the remote branch
+git checkout --force -B "$MAIN_BRANCH" "$REMOTE_NAME/$MAIN_BRANCH"
+
+# Ensure the branch is up to date
+git pull "$REMOTE_NAME" "$MAIN_BRANCH"
+
+# Switch back to the release branch
 git checkout "$RELEASE_BRANCH"
 
 # Get commit messages to be included in the merge
@@ -87,9 +103,6 @@ if git rebase "$MAIN_BRANCH"; then
         # Store the success message
         message="Rebase and merge of $RELEASE_BRANCH onto $MAIN_BRANCH completed successfully."
 
-        # Restore execute permissions to the scripts after the previous checkouts and merge
-        restore_script_permissions
-
         # Append commit messages if any
         if [[ -n "$COMMIT_MESSAGES" ]]; then
             # Format the merged commit messages and append them to the status message
@@ -100,6 +113,9 @@ if git rebase "$MAIN_BRANCH"; then
 
         # Set success output
         set_success_output "$message"
+
+        # Restore execute permissions to the scripts after the previous checkouts and merge
+        restore_script_permissions
     else
         # Fetch the latest changes from the remote repository
         git fetch "$REMOTE_NAME" && echo "Successfully fetched changes from $REMOTE_NAME"
@@ -111,21 +127,22 @@ if git rebase "$MAIN_BRANCH"; then
         # Store the failure message
         message="The fast-forward merge of the rebased $RELEASE_BRANCH onto $MAIN_BRANCH failed due to conflicts! Please resolve manually."
 
-        # Restore execute permissions to the scripts after the previous checkouts
-        restore_script_permissions
-
         # Set failure output
         set_failure_output "$message"
+
+        # Restore execute permissions to the scripts after the previous checkouts
+        restore_script_permissions
     fi
 else
     # Store the failure message
-    message="Rebase of $RELEASE_BRANCH onto $MAIN_BRANCH failed."
-
-    # Restore execute permissions to the scripts after the previous checkouts
-    restore_script_permissions
+    message="Rebase of $RELEASE_BRANCH onto $MAIN_BRANCH failed due to conflicts! Please resolve manually."
 
     # Set failure output
     set_failure_output "$message"
+
+    # Restore execute permissions to the scripts after the previous checkouts
+    restore_script_permissions
 fi
+
 # Echo the message to the log
 echo "$message"

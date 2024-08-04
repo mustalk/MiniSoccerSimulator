@@ -29,7 +29,9 @@ runs:
   steps:
     # Grants execute permissions to all shell scripts in .github/scripts
     - name: Grant Execute Permission
-      run: chmod +x .github/scripts/*/*.sh
+      run: |
+        chmod +x .github/scripts/*/*.sh
+        chmod +x .github/scripts/*/*/*.sh
       shell: bash
 
     # Runs the GPG setup script with the GPG private key from inputs
@@ -43,7 +45,7 @@ runs:
     # using provided branch names and GPG passphrase for signing
     - name: Rebase release onto main and push
       if: success()
-      run: .github/scripts/release/rebase-merge.sh
+      run: .github/scripts/release/auto/rebase-merge.sh
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ inputs.github-repository }}

@@ -6,16 +6,18 @@
 
 name: Release to Main
 on:
-  pull_request:
-    types: [closed]
-    branches: [ 'test/release-pre-cd' ]
+  push:
+    branches: [ 'ci/9-test-rebase-merge-automation' ]
+  #pull_request:
+  #  types: [closed]
+  #  branches: [ release ]
 
 permissions:
   contents: write
 
 jobs:
   promote-release:
-    if: github.event.pull_request.merged == true
+    #if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     env:
       ACTIONS_BOT_USERNAME: ${{ vars.ACTIONS_BOT_USERNAME }}
@@ -31,8 +33,8 @@ jobs:
         id: rebase
         uses: ./.github/actions/execute/promote-release
         with:
-          release-branch: 'test/release-pre-cd'
-          main-branch: 'test/main-pre-cd'
+          release-branch: 'ci/9-test-rebase-merge-automation'
+          main-branch: 'test/2-release-pre-cd'
           remote-name: 'origin'
           gpg-key: ${{ secrets.BOT_GPG_PKEY }}
           gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
