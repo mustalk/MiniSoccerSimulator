@@ -1,8 +1,8 @@
 name: 'Setup jdk and gradle'
-description: 'Runs the main android-test workflow steps if the condition is met'
+description: 'Runs the main android-test workflow steps if the condition is met. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 inputs:
-  GRADLE_ENCRYPTION_KEY:
+  gradle-encryption-key:
     description: 'Gradle encryption key'
     required: true
 
@@ -41,7 +41,7 @@ runs:
         # Builds on other branches will only read existing entries from the cache.
         # (disabled until a first successful run on 'main' or 'release' is cached. This ensures PR builds can create/access the cache initially.)
         cache-read-only: false #${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
-        cache-encryption-key: ${{ inputs.GRADLE_ENCRYPTION_KEY }}
+        cache-encryption-key: ${{ inputs.gradle-encryption-key }}
       # Documentation: Ensures that the Gradle wrapper is set up correctly
       # See: https://github.com/gradle/gradle-build-action
       # And: https://github.com/gradle/actions/blob/main/docs/setup-gradle.md

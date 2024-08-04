@@ -1,0 +1,59 @@
+name: 'Promote release'
+description: 'Promotes a release with rebase & merge using GPG signing. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+
+inputs:
+  release-branch:
+    description: 'The release branch to rebase.'
+    required: true
+    default: 'release'
+  main-branch:
+    description: 'The main branch to rebase onto.'
+    required: true
+    default: 'main'
+  remote-name:
+    description: 'The remote name to use for fetch/push.'
+    required: true
+    default: 'origin'
+  gpg-key:
+    description: 'The GPG private key for signing commits.'
+    required: true
+  gpg-passphrase:
+    description: 'The passphrase for GPG signing.'
+    required: true
+  github-repository:
+    description: 'GitHub repository'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Grants execute permissions to all shell scripts in .github/scripts
+    - name: Grant Execute Permission
+      run: chmod +x .github/scripts/*/*.sh
+      shell: bash
+
+    # Runs the GPG setup script with the GPG private key from inputs
+    - name: Setup GPG
+      run: .github/scripts/gpg-signing/setup.sh
+      shell: bash
+      env:
+        BOT_GPG_PKEY: ${{ inputs.gpg-key }}
+
+    # Runs the rebase-release script if previous steps succeeded,
+    # using provided branch names and GPG passphrase for signing
+    - name: Rebase release onto main and push
+      if: success()
+      run: .github/scripts/release/rebase-merge.sh
+      shell: bash
+      env:
+        GITHUB_REPOSITORY: ${{ inputs.github-repository }}
+        RELEASE_BRANCH: ${{ inputs.release-branch }}
+        MAIN_BRANCH: ${{ inputs.main-branch }}
+        REMOTE_NAME: ${{ inputs.remote-name }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+
+    # Runs the GPG cleanup script to remove the GPG agent and key
+    - name: Cleanup GPG
+      if: always()
+      run: .github/scripts/gpg-signing/cleanup.sh
+      shell: bash

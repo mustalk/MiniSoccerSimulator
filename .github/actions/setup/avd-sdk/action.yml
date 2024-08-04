@@ -1,5 +1,5 @@
 name: 'Setup android sdk'
-description: 'Setup avd and android sdk'
+description: 'Setup avd and android sdk. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 runs:
   using: 'composite'

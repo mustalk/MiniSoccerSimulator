@@ -11,6 +11,10 @@ local.properties
 # Firebase configuration file. This file contains sensitive API keys and should not be committed to version control.
 app/google-services.json
 
+# Ignore CI-generated files
+fingerprint.fpr
+git_env.sh
+
 # Built application files
 *.apk
 *.ap_
