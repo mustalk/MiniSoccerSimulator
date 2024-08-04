@@ -1,0 +1,55 @@
+# Copyright 2024 MusTalK (https://github.com/mustalk)
+
+# This workflow automatically promotes the release branch to the main branch, executing a rebase & merge when a pull request is closed and merged.
+
+# It includes GPG signing of commits to ensure authenticity and integrity and sends a Slack notification about the result.
+
+name: Release to Main
+on:
+  pull_request:
+    types: [closed]
+    branches: [ release ]
+
+permissions:
+  contents: write
+
+jobs:
+  promote-release:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    env:
+      ACTIONS_BOT_USERNAME: ${{ vars.ACTIONS_BOT_USERNAME }}
+      ACTIONS_GITHUB_SLACK_CHANNEL: ${{ vars.ACTIONS_GITHUB_SLACK_CHANNEL }}
+
+    steps:
+      # Checks out the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Promote the release, execute a rebase & merge release branch into main with GPG signing
+      - name: Promote Release (Rebase & Merge)
+        id: rebase
+        uses: ./.github/actions/execute/promote-release
+        with:
+          release-branch: 'test/release-pre-cd'
+          main-branch: 'test/main-pre-cd'
+          remote-name: 'origin'
+          gpg-key: ${{ secrets.BOT_GPG_PKEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          github-repository: ${{ github.event.repository.name }}
+
+
+      # Send Slack notification
+      - name: Send Slack notification
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_GITHUB_WEBHOOK_URL }}
+          SLACK_CHANNEL: ${{ env.ACTIONS_GITHUB_SLACK_CHANNEL }}
+          SLACK_USERNAME: ${{ env.ACTIONS_BOT_USERNAME }}
+          SLACK_TITLE: ${{ env.REBASE_MERGE_STATUS == 'success' && 'Merge Release :white_check_mark:' || 'Merge Release :x:' }}
+          SLACK_COLOR: ${{ env.REBASE_MERGE_STATUS == 'success' && 'good' || 'danger' }}
+          SLACK_MESSAGE: ${{ env.REBASE_MERGE_MESSAGE }}
+          SLACKIFY_MARKDOWN: true
+          ENABLE_ESCAPES: true
+          SLACK_FOOTER: ''

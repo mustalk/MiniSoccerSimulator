@@ -1,8 +1,8 @@
 name: 'Restore Google Services'
-description: 'Restore google-services.json file'
+description: 'Restore google-services.json file. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 inputs:
-  APP_GOOGLE_SERVICES_JSON_B64:
+  encoded-google-services-json:
     description: 'Base64 encoded google-services.json'
     required: true
 
@@ -12,6 +12,7 @@ runs:
     # Restore google-services.json file
     - name: Restore google-services.json
       run: |
-        echo "${{ inputs.APP_GOOGLE_SERVICES_JSON_B64 }}" | base64 --decode > app/google-services.json
+        echo "${{ inputs.encoded-google-services-json }}" | base64 --decode > app/google-services.json
+        echo "google-services restored successfully."
       shell: bash
       # Documentation: Restore the google-services.json file needed for the build process

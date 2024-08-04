@@ -1,3 +1,5 @@
+# Copyright 2024 MusTalK (https://github.com/mustalk)
+
 # Android Test Workflow
 
 # This workflow automates the testing process for Android projects. It is designed to run tests on specific branches and pull requests,
@@ -50,10 +52,6 @@ jobs:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
 
     steps:
-      # Checkout the repository
-      - name: Checkout
-        uses: actions/checkout@v4
-
       # Check for open PRs targeting the release branch (only if not on main or release branch)
       - name: Check Open PRs
         if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release'
@@ -84,12 +82,17 @@ jobs:
           fi
         shell: bash
 
+      # Checkout the repository
+      - name: Checkout
+        if: env.RUN_TESTS == 'true'
+        uses: actions/checkout@v4
+
       # Sets up the required JDK and Gradle environment for the project.
       - name: Setup JDK and Gradle
         if: env.RUN_TESTS == 'true'
         uses: ./.github/actions/setup/gradle-java
         with:
-          GRADLE_ENCRYPTION_KEY: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+          gradle-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       # Performs static code analysis using Detekt and Ktlint.
       - name: Code Analysis
@@ -101,7 +104,7 @@ jobs:
         if: env.RUN_TESTS == 'true'
         uses: ./.github/actions/manage/gservices/restore
         with:
-          APP_GOOGLE_SERVICES_JSON_B64: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
+          encoded-google-services-json: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
 
       # Runs unit tests and uploads test reports.
       - name: Execute Unit Tests
