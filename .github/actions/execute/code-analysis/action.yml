@@ -1,5 +1,5 @@
 name: 'Code analysis'
-description: 'Run code analysis and upload reports'
+description: 'Run code analysis and upload reports. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 runs:
   using: 'composite'

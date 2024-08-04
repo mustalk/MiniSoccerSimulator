@@ -1,5 +1,5 @@
 name: 'Execute unit tests'
-description: 'Execute debug and release unit tests and uploads the generated reports'
+description: 'Execute debug and release unit tests and uploads the generated reports. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 runs:
   using: "composite"
