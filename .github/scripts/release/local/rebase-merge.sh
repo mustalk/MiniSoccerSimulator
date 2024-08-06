@@ -261,4 +261,4 @@ else
 fi
 
 # Echo the message to the log
-echo "$message"
+echo -e "$message"

@@ -37,10 +37,10 @@ runs:
       id: setup-gradle
       with:
         gradle-version: wrapper
-        # Only write to the cache for builds on the 'main' and 'release' branches. (Default is 'main' only.)
-        # Builds on other branches will only read existing entries from the cache.
-        # (disabled until a first successful run on 'main' or 'release' is cached. This ensures PR builds can create/access the cache initially.)
-        cache-read-only: false #${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
+        # Allow caching for all branches.
+        # Write access to the cache is limited to 'main' and 'release' branches.
+        # Other branches have read-only access to the cache.
+        cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/release' }}
         cache-encryption-key: ${{ inputs.gradle-encryption-key }}
       # Documentation: Ensures that the Gradle wrapper is set up correctly
       # See: https://github.com/gradle/gradle-build-action
