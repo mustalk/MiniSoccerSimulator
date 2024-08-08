@@ -1,57 +1,13 @@
 #!/bin/bash
 # Copyright 2024 MusTalK (https://github.com/mustalk)
 
-# This script performs an interactive rebase and merge operation for a release branch onto the main branch locally.
-# It allows for manual conflict resolution and commit squashing/fixing.
-#
-# --- Usage ---
-#
-# 1. Ensure you have no uncommitted changes in your working directory.
-# 2. Open a terminal in the root directory of your Git repository.
-# 3. Grant execute permission to the script: chmod +x .github/scripts/local/rebase-merge.sh
-# 4. Run the script: ./.github/scripts/local/rebase-merge.sh
-# 5. The script will:
-#    - Stash any uncommitted changes.
-#    - Fetch the latest changes from the 'origin' remote.
-#    - Checkout the main branch and update it.
-#    - Checkout the release branch and update it.
-#    - Perform an interactive rebase of the release branch onto the main branch.
-#    - Open an editor where you can choose how to handle each commit (pick, reword, edit, squash, fixup).
-#    - If conflicts occur, you'll be prompted to resolve them manually and continue the rebase.
-#    - Attempt a fast-forward merge of the rebased release branch into the main branch.
-#    - If the merge is successful:
-#       - Push the changes to the remote repository (if AUTO_PUSH is set to "true").
-#       - Switch back to the original branch from which the script was started.
-#       - Un-stash any previously stashed changes.
-#
-# --- Interactive Rebase Cheat Sheet ---
-#
-# Commands:
-# - pick: Use the commit as-is.
-# - reword: Edit the commit message.
-# - edit: Make changes to the commit content.
-# - squash: Combine the commit with the previous one.
-# - fixup: Combine the commit with the previous one and discard its commit message.
-#
-# Example:
-# To squash the last two commits into one:
-# 1. Change the second-to-last commit command to 'squash'.
-# 2. Save and close the editor.
-# 3. A new editor will open to edit the combined commit message.
+# Local Interactive Rebase and Merge Script
+
+# This script provides an interactive way to rebase and merge a release branch onto the main branch locally.
+# See the README.md in this directory for detailed usage instructions and information.
 
 # Enable strict mode
 set -euo pipefail
-
-# Set GitHub token from an environment variable
-# This assumes that the environment variable GITHUB_TOKEN has already been defined.
-USER_GITHUB_TOKEN=$GITHUB_TOKEN
-
-# Check if the environment variable is not set
-if [ -z "$USER_GITHUB_TOKEN" ]; then
-    # Prompt for GitHub token if not found
-    read -r -s -p "Enter your GitHub token: " USER_GITHUB_TOKEN
-    echo ""
-fi
 
 # Set github repository (used to format commit messages)
 export GITHUB_REPOSITORY="mustalk/MiniSoccerSimulator"
@@ -171,7 +127,7 @@ git pull --rebase "$REMOTE_NAME" "$MAIN_BRANCH"
 git checkout "$RELEASE_BRANCH"
 
 # Get commit messages to be included in the merge
-COMMIT_RANGE="$REMOTE_NAME/$MAIN_BRANCH...$REMOTE_NAME/$RELEASE_BRANCH"
+COMMIT_RANGE="$REMOTE_NAME/$MAIN_BRANCH..$REMOTE_NAME/$RELEASE_BRANCH"
 COMMIT_MESSAGES=$(git log --pretty="%H %h %s" "$COMMIT_RANGE")
 
 # Rebase the release branch onto the main branch interactively

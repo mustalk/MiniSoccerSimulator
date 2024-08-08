@@ -7,20 +7,15 @@
 
 # Reasoning and Benefits:
 
-# Targeted Execution: Tests are only executed on the `main`, `release`, and development branches (following specific naming conventions),
-#   as well as pull requests targeting the `release` branch. This prevents unnecessary test runs on branches that might not require
-#   testing, saving resources, and providing a developer-friendly CI process.
-
-# Tests are executed only in the following scenarios:
-#  - Pushes to the `main` or `release` branch.
-#  - Pull requests targeting the`release` branch.
-#  - Pushes to development branches if there are no open PRs targeting the `release` branch.
+# Targeted Execution: Tests are executed on pushes to `main` and development branches (following specific naming conventions),
+#   as well as pull requests targeting the `release` branch (excluding those from CI or documentation branches). This prevents
+#   unnecessary test runs on branches that might not require testing, saving resources, and providing a developer-friendly CI process.
 
 # Enforced Branch Naming: By specifying branch patterns, the workflow encourages developers to follow consistent naming conventions,
 #   leading to a more organized and manageable repository.
 
-# Conditional PR Testing: For pull requests from development branches, tests are only run if there is an open pull request targeting
-#   the `release` branch. This helps to avoid redundant CI runs and ensures that changes are validated against the latest `release`
+# Conditional PR Testing: For pull requests targeting the `release` branch, tests are only run if the source branch is not a CI or
+#   documentation branch. This helps to avoid redundant CI runs and ensures that changes are validated against the latest `release`
 #   candidate before being merged.
 
 # Organized Workflow: Composite actions are used to encapsulate common tasks, improving workflow readability and maintainability.
@@ -34,8 +29,8 @@ name: Android Test
 # Trigger workflow on push to specified branches and pull requests to release
 on:
   push:
-    branches: [ main, release, 'feature/**', 'bugfix/**', 'chore/**', 'style/**',
-                'refactor/**', 'test/**', 'perf/**', 'ci/**', 'build/**',
+    branches: [ main, 'feature/**', 'bugfix/**', 'chore/**',
+                'refactor/**', 'test/**', 'perf/**', 'build/**',
                 'hotfix/**', 'experiment/**']
   pull_request:
     branches: [ release ]
@@ -47,6 +42,8 @@ permissions:
 
 jobs:
   android-test:
+    # Skip Android tests for CI and documentation branches, as they typically don't include app code changes.
+    if: "!startsWith(github.head_ref, 'ci/') && !startsWith(github.head_ref, 'docs/')"
     runs-on: ubuntu-latest
     env:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15

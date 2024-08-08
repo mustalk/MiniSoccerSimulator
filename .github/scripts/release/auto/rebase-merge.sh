@@ -1,21 +1,17 @@
 #!/bin/bash
 # Copyright 2024 MusTalK (https://github.com/mustalk)
 
-# This script performs a rebase and merge operation for the release branch onto the main branch.
-# It includes GPG signing of commits to ensure authenticity and integrity.
+# Rebase and Merge Script
+
+# This script automates the rebasing and merging of the release branch onto the main branch.
+# See the README.md in this directory for detailed documentation and important considerations.
 
 # Enable strict mode
 set -euo pipefail
 
 # Function to restore execute permissions to scripts
 restore_script_permissions() {
-    if [[ -d ".github/scripts" ]]; then
-        chmod +x .github/scripts/*/*.sh
-
-        if [[ -d ".github/scripts/*/*" ]]; then
-            chmod +x .github/scripts/*/*/*.sh
-        fi
-    fi
+    .github/scripts/utils/grant_exec_perms.sh
 }
 
 # Function to set failure output into env. variables, to be used by next workflow steps
@@ -33,7 +29,7 @@ set_success_output() {
 }
 
 # List of required environment variables
-required_vars=(GITHUB_REPOSITORY RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME GPG_PASSPHRASE)
+required_vars=(GITHUB_REPOSITORY RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME)
 
 # Check if each required variable is set
 for var in "${required_vars[@]}"; do
@@ -76,32 +72,31 @@ git pull "$REMOTE_NAME" "$MAIN_BRANCH"
 git checkout "$RELEASE_BRANCH"
 
 # Get commit messages to be included in the merge
-COMMIT_RANGE="$REMOTE_NAME/$MAIN_BRANCH...$REMOTE_NAME/$RELEASE_BRANCH"
+COMMIT_RANGE="$REMOTE_NAME/$MAIN_BRANCH..$REMOTE_NAME/$RELEASE_BRANCH"
 COMMIT_MESSAGES=$(git log --pretty="%H %h %s" "$COMMIT_RANGE")
 
-# Rebase the release branch onto the main branch
-if git rebase "$MAIN_BRANCH"; then
+# Ensure the GPG agent is running
+gpgconf --launch gpg-agent
+
+# Rebase using the default ort strategy with -X theirs for conflict resolutions, favoring the release branch changes.
+# Refer to the README.md in this directory for more details about the reasoning behind using this strategy
+if git rebase -X theirs "$MAIN_BRANCH"; then
+    echo "Rebase completed successfully."
     # Checkout the main branch
     git checkout "$MAIN_BRANCH"
 
     # Fast-forward merge to the rebased release branch
     if git merge --ff-only "$RELEASE_BRANCH"; then
-        echo "Successfully merged $RELEASE_BRANCH into $MAIN_BRANCH"
-
-        # Set the GPG program to use for Git
-        git config --global gpg.program gpg
-
-        # Provide the passphrase to GPG via standard input and sign the commit
-        if ! echo "$GPG_PASSPHRASE" | gpg --batch --quiet --yes --pinentry-mode loopback --passphrase-fd 0 --sign; then
-            echo "Error: Signing the commit failed."
-            exit 1
-        fi
+        echo "Successfully merged $RELEASE_BRANCH into $MAIN_BRANCH using fast-forward"
 
         # Push the updated main branch to the remote repository
         git push "$REMOTE_NAME" "$MAIN_BRANCH" && echo "Successfully pushed changes to $REMOTE_NAME/$MAIN_BRANCH"
 
+        # Restore execute permissions to the scripts after the previous checkouts and merge
+        restore_script_permissions
+
         # Store the success message
-        message="Rebase and merge of $RELEASE_BRANCH onto $MAIN_BRANCH completed successfully."
+        message="Rebase and merge of $RELEASE_BRANCH onto $MAIN_BRANCH completed successfully using fast-forward."
 
         # Append commit messages if any
         if [[ -n "$COMMIT_MESSAGES" ]]; then
@@ -113,9 +108,6 @@ if git rebase "$MAIN_BRANCH"; then
 
         # Set success output
         set_success_output "$message"
-
-        # Restore execute permissions to the scripts after the previous checkouts and merge
-        restore_script_permissions
     else
         # Fetch the latest changes from the remote repository
         git fetch "$REMOTE_NAME" && echo "Successfully fetched changes from $REMOTE_NAME"
@@ -137,6 +129,9 @@ else
     # Store the failure message
     message="Rebase of $RELEASE_BRANCH onto $MAIN_BRANCH failed due to conflicts! Please resolve manually."
 
+    # Abort the rebase on merge conflicts
+    git rebase --abort
+
     # Set failure output
     set_failure_output "$message"
 
@@ -145,4 +140,4 @@ else
 fi
 
 # Echo the message to the log
-echo "$message"
+echo -e "$message"

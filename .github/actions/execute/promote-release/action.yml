@@ -27,11 +27,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    # Grants execute permissions to all shell scripts in .github/scripts
+    # Grants execute permissions to all our shell scripts
     - name: Grant Execute Permission
-      run: |
-        chmod +x .github/scripts/*/*.sh
-        chmod +x .github/scripts/*/*/*.sh
+      run: .github/scripts/utils/grant_exec_perms.sh
       shell: bash
 
     # Runs the GPG setup script with the GPG private key from inputs
@@ -40,10 +38,11 @@ runs:
       shell: bash
       env:
         BOT_GPG_PKEY: ${{ inputs.gpg-key }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
 
     # Runs the rebase-release script if previous steps succeeded,
-    # using provided branch names and GPG passphrase for signing
-    - name: Rebase release onto main and push
+    # using provided branch names and GPG passphrase for signing.
+    - name: Rebase release onto main
       if: success()
       run: .github/scripts/release/auto/rebase-merge.sh
       shell: bash
@@ -52,7 +51,19 @@ runs:
         RELEASE_BRANCH: ${{ inputs.release-branch }}
         MAIN_BRANCH: ${{ inputs.main-branch }}
         REMOTE_NAME: ${{ inputs.remote-name }}
-        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+
+    # Synchronize the release branch with main after the rebase-merge.
+    # This ensures that the release branch reflects the latest state of main,
+    # because commit hashes change after the rebase-merge process into main.
+    # With this we avoid potential merge conflicts in the future.
+    - name: Synchronize release branch
+      if: success()
+      run: .github/scripts/release/auto/sync_release.sh
+      shell: bash
+      env:
+        RELEASE_BRANCH: ${{ inputs.release-branch }}
+        MAIN_BRANCH: ${{ inputs.main-branch }}
+        REMOTE_NAME: ${{ inputs.remote-name }}
 
     # Runs the GPG cleanup script to remove the GPG agent and key
     - name: Cleanup GPG

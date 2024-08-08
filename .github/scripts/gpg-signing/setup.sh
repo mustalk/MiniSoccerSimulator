@@ -8,8 +8,14 @@ set -euo pipefail # Enable strict mode
 
 # Check if BOT_GPG_PKEY is set
 if [ -z "${BOT_GPG_PKEY}" ]; then
-  echo "Error: Environment variable BOT_GPG_PKEY is not set."
-  exit 1
+    echo "Error: Environment variable BOT_GPG_PKEY is not set."
+    exit 1
+fi
+
+# Check if GPG_PASSPHRASE is set
+if [ -z "${GPG_PASSPHRASE}" ]; then
+    echo "Error: Environment variable GPG_PASSPHRASE is not set."
+    exit 1
 fi
 
 # Import GPG key
@@ -26,7 +32,7 @@ USER_NAME=$(echo "$USER_INFO" | awk -F '<|>' '{print $1}')
 USER_EMAIL=$(echo "$USER_INFO" | awk -F '<|>' '{print $2}')
 
 # Check if user information was extracted
-[[ -n "$USER_NAME"&& -n "$USER_EMAIL" ]] || { echo "User information extraction failed!"; exit 1; }
+[[ -n "$USER_NAME" && -n "$USER_EMAIL" ]] || { echo "User information extraction failed!"; exit 1; }
 
 # Set Git config variables, needed by the semantic-release plugin, for commit signing
 {
@@ -44,5 +50,14 @@ git config --global user.name "$GIT_AUTHOR_NAME" || { echo "Setting user.name fa
 git config --global user.email "$GIT_AUTHOR_EMAIL" || { echo "Setting user.email failed!"; exit 1; }
 git config --global commit.gpgSign true || { echo "Setting commit.gpgSign failed!"; exit 1; }
 git config --global user.signingkey "$FINGERPRINT" || { echo "Setting user.signingkey failed!"; exit 1; }
+
+# Set the GPG program to use for Git
+git config --global gpg.program gpg || { echo "Setting gpg.program failed!"; exit 1; }
+
+# Configure GPG agent to use the passphrase via loopback
+if ! echo "$GPG_PASSPHRASE" | gpg --batch --quiet --yes --pinentry-mode loopback --passphrase-fd 0 --no-tty --command-fd 0 --sign; then
+    echo "GPG passphrase setup failed!";
+    exit 1
+fi
 
 echo "GPG setup completed successfully."
