@@ -1,4 +1,5 @@
 #!/bin/bash
+# Copyright 2024 MusTalK (https://github.com/mustalk)
 
 COMMIT_MESSAGES=$1
 formatted_message=""
