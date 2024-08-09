@@ -29,9 +29,12 @@ We follow these conventions for naming branches:
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) for writing consistent and informative commit messages. This convention helps to:
 
-- **Automate Changelog generation:** The `android-release.yml` workflow uses [semantic-release](https://github.com/semantic-release/semantic-release) to automatically generate release notes and update the `CHANGELOG.md` based on commit messages that follow the Conventional Commits specification.
-- **Enforce semantic versioning:** Semantic-release uses the commit message format to determine the appropriate version bump (major, minor, or patch) according to [Semantic Versioning](https://semver.org/) principles.
-- **Improve code readability and maintainability:** Consistent commit messages make it easier to understand the history of changes and the reasoning behind them.
+- **Automate Changelog generation:** The `android-release.yml` workflow uses [semantic-release](https://github.com/semantic-release/semantic-release)
+    to automatically generate release notes and update the `CHANGELOG.md` based on commit messages that follow the Conventional Commits specification.
+- **Enforce semantic versioning:** Semantic-release uses the commit message format to determine the appropriate version bump (major, minor, or patch)
+    according to [Semantic Versioning](https://semver.org/) principles.
+- **Improve code readability and maintainability:** Consistent commit messages make it easier to understand the history of changes and the reasoning
+    behind them.
 
 **Commit Message Format:**
 
@@ -67,7 +70,7 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
 ## Workflow
 
 1. **Development:**
-    - Create a new branch from `release` using the appropriate naming convention.
+    - Create a new branch from `main` using the appropriate naming convention.
     - Develop the feature, bug fix, or other change on your branch.
     - Commit changes with descriptive messages following the Conventional Commits format.
     - Push your feature branch to the remote repository.
@@ -77,7 +80,11 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
     - Ensure all CI checks pass and the code is reviewed.
     - Merge the PR into `release`.
 
-3. **Release Preparation:**
+3. **Automated Rebase and Merge:**
+    - Upon successful merge of a pull request into the `release` branch, an automated workflow attempts to rebase and merge `release` into `main`.
+    - This automated process only occurs if there are no merge conflicts.
+
+4. **Release Preparation:**
     - The `android-release.yml` workflow runs automatically on every push or (PR) merge to `release`.
     - This workflow uses `semantic-release` to:
         - Analyze commit messages and determine the next version number based on Conventional Commits and Semantic Versioning.
@@ -87,13 +94,50 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
         - Create a new GitHub release.
         - Notify about the release on Slack.
 
-4. **Deployment:**
+5. **Deployment:**
     - Once the release is ready, create a PR to merge `release` into `main`.
     - After the PR is merged, the `android-deploy.yml` workflow runs automatically.
     - This workflow:
         - Builds the app.
         - Deploys the app to Firebase App Distribution (and easily to Google Play when we're ready to publish).
         - Uploads the APK to the GitHub release assets.
+
+## Handling Merge Conflicts
+
+- **Automated Workflow:** The automated rebase and merge process is designed to handle straightforward merges efficiently. It will only perform
+    the merge if no conflicts are detected.
+    - Refer to the [auto/rebase-merge.sh documentation](.github/scripts/release/auto/README.md) for details about this script and its implications.
+- **Manual Script:** For complex merge scenarios or when conflicts arise, I created a dedicated script (`local/rebase-merge.sh`) to handle
+    merge conflicts and perform interactive rebases. This script provides a convenient way to resolve conflicts manually and ensure a clean merge.
+    - Refer to the [local/rebase-merge.sh documentation](.github/scripts/release/local/README.md) for detailed usage instructions and information.
+
+- **If your pull request cannot be merged automatically:** This can happen if other branches have been merged into `release` since you created your
+    feature branch. In such cases, you'll need to rebase your branch onto the updated `release` branch before creating the pull request.
+    Use the following command to rebase your branch: `git rebase release`
+
+This will replay your commits on top of the latest changes in `release`, ensuring a clean merge.
+
+## Branch Synchronization
+
+To minimize merge conflicts and ensure that the `release` branch reflects the latest stable code,
+we use an automated process to synchronize it with the `main` branch after each successful release.
+
+**Automated Synchronization:**
+
+The `promote-release` composite GitHub Action automatically synchronizes the `release` branch with `main` after a successful release.
+This involves rebasing the `release` branch onto `main` and force-pushing the changes. This process is necessary because
+the commit hashes on `main` change after the `auto/rebase-merge` operation, even though the content is identical.
+By synchronizing the branches, we avoid potential merge conflicts in the future and ensure that `release` always reflects the latest state of `main`.
+
+**Benefits:**
+
+* **Reduced merge conflicts:** Minimizes the risk of merge conflicts when merging future changes into `release`.
+* **Up-to-date release branch:** Guarantees that `release` always contains the latest stable code from `main`.
+* **Clean history:** Maintains a linear and easy-to-follow commit history on both our `main` and `release` branch.
+* **Automated workflow:** Eliminates the need for manual synchronization and ensures consistency.
+
+This automated synchronization process is a crucial part of our branching strategy and workflow,
+ensuring a smooth and efficient workflow for managing releases and integrating new features.
 
 ## GitHub Actions Workflows
 
@@ -106,7 +150,7 @@ We use GitHub Actions for continuous integration and deployment. The following w
 
 ## Code Style and Conventions
 
-This project uses Detekt, Ktlint, and Spotless to enforce consistent code style and coding conventions.
+For this project I chose Detekt, Ktlint, and Spotless to enforce consistent code style and coding conventions.
 
 These tools are integrated into the build process and a pre-commit script that automatically checks your code before each commit. So ensure
 that your code adheres to the defined style guidelines to avoid any issues during the commit process.
@@ -119,9 +163,9 @@ You can manually run these tools using the following commands:
 
 Optionally, for a more streamlined workflow, you can configure Android Studio to format your code with Ktlint on file save:
 
-Install the [Detekt](https://plugins.jetbrains.com/plugin/10761-detekt) plugin and optionally the [Ktlint](https://plugins.jetbrains.com/plugin/15057-ktlint)
-and/or [Spotless](https://plugins.jetbrains.com/plugin/18321-spotless-gradle) plugins for Android Studio to get
-real-time feedback and inspections directly in the IDE.
+Install the [Detekt](https://plugins.jetbrains.com/plugin/10761-detekt) plugin and optionally
+the [Ktlint](https://plugins.jetbrains.com/plugin/15057-ktlint) and/or [Spotless](https://plugins.jetbrains.com/plugin/18321-spotless-gradle)
+plugins for Android Studio to get real-time feedback and inspections directly in the IDE.
 
 You can configure and use them as its suits you best
 
@@ -135,7 +179,7 @@ If you prefer using shortcuts, you can configure keymaps for the installed plugi
 
 ## Important Notes
 
-- Always create a new branch for each new feature or bug fix from the release branch.
+- Always create a new branch for each new feature or bug fix from the `main` branch.
 - Follow the branch naming conventions.
 - Write clear and descriptive commit messages using Conventional Commits.
 - Ensure all CI checks pass before merging PRs.
