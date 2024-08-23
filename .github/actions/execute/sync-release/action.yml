@@ -1,13 +1,13 @@
-name: 'Promote release'
-description: 'Promotes a release with rebase & merge using GPG signing. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+name: 'Sync release'
+description: 'Synchronizes the release branch with main after a rebase-merge. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 inputs:
   release-branch:
-    description: 'The release branch to rebase.'
+    description: 'The release branch to sync.'
     required: true
     default: 'release'
   main-branch:
-    description: 'The main branch to rebase onto.'
+    description: 'The main branch to sync with.'
     required: true
     default: 'main'
   remote-name:
@@ -20,9 +20,6 @@ inputs:
   gpg-passphrase:
     description: 'The passphrase for GPG signing.'
     required: true
-  github-repository:
-    description: 'GitHub repository'
-    required: true
 
 runs:
   using: 'composite'
@@ -30,8 +27,8 @@ runs:
     # Initialize default status to skipped, so we can check if the script has been executed successfully or not in the workflow.
     - name: Initialize default action status
       run: |
-        echo "PROMOTE_RELEASE_STATUS=skipped" >>"$GITHUB_ENV"
-        echo "PROMOTE_RELEASE_MESSAGE='Promote release step was skipped.'" >>"$GITHUB_ENV"
+        echo "SYNC_RELEASE_STATUS=skipped" >>"$GITHUB_ENV"
+        echo "SYNC_RELEASE_MESSAGE='Synchronization step was skipped.'" >>"$GITHUB_ENV"
       shell: bash
 
     # Grants execute permissions to all shell scripts.
@@ -50,14 +47,12 @@ runs:
         BOT_GPG_PKEY: ${{ inputs.gpg-key }}
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
 
-    # Runs the rebase-release script if previous steps succeeded,
-    # using provided branch names and GPG passphrase for signing.
-    - name: Rebase release onto main
+    # Synchronizes the release branch with main after a rebase-merge.
+    - name: Synchronize release branch
       if: success()
-      run: .github/scripts/release/auto/rebase-merge.sh
+      run: .github/scripts/release/auto/sync-release.sh
       shell: bash
       env:
-        GITHUB_REPOSITORY: ${{ inputs.github-repository }}
         RELEASE_BRANCH: ${{ inputs.release-branch }}
         MAIN_BRANCH: ${{ inputs.main-branch }}
         REMOTE_NAME: ${{ inputs.remote-name }}

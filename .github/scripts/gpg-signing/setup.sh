@@ -1,10 +1,11 @@
 #!/bin/bash
 # Copyright 2024 MusTalK (https://github.com/mustalk)
-
+#
 # This script sets up the GPG environment for signing commits during the CI process.
 # It imports the GPG key, extracts necessary information, and configures Git to use the key for signing.
-
-set -euo pipefail # Enable strict mode
+#
+# Enable strict mode
+set -euo pipefail
 
 # Check if BOT_GPG_PKEY is set
 if [ -z "${BOT_GPG_PKEY}" ]; then
@@ -54,10 +55,11 @@ git config --global user.signingkey "$FINGERPRINT" || { echo "Setting user.signi
 # Set the GPG program to use for Git
 git config --global gpg.program gpg || { echo "Setting gpg.program failed!"; exit 1; }
 
-# Configure GPG agent to use the passphrase via loopback
-if ! echo "$GPG_PASSPHRASE" | gpg --batch --quiet --yes --pinentry-mode loopback --passphrase-fd 0 --no-tty --command-fd 0 --sign; then
-    echo "GPG passphrase setup failed!";
+# Configure GPG agent to use the passphrase via loopback, we redirect the standard output to /dev/null
+# to suppress unnecessary verbose output, while capturing error messages in the `error_message` variable.
+if ! error_message=$( { echo "$GPG_PASSPHRASE" | gpg --batch --quiet --yes --pinentry-mode loopback --passphrase-fd 0 --no-tty --command-fd 0 --sign; } 2>&1 > /dev/null); then
+    echo "GPG passphrase setup failed: $error_message";
     exit 1
 fi
 
-echo "GPG setup completed successfully."
+echo "GPG setup completed successfully." >&2

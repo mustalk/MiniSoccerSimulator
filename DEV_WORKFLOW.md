@@ -30,11 +30,11 @@ We follow these conventions for naming branches:
 We use [Conventional Commits](https://www.conventionalcommits.org/) for writing consistent and informative commit messages. This convention helps to:
 
 - **Automate Changelog generation:** The `android-release.yml` workflow uses [semantic-release](https://github.com/semantic-release/semantic-release)
-    to automatically generate release notes and update the `CHANGELOG.md` based on commit messages that follow the Conventional Commits specification.
+  to automatically generate release notes and update the `CHANGELOG.md` based on commit messages that follow the Conventional Commits specification.
 - **Enforce semantic versioning:** Semantic-release uses the commit message format to determine the appropriate version bump (major, minor, or patch)
-    according to [Semantic Versioning](https://semver.org/) principles.
+  according to [Semantic Versioning](https://semver.org/) principles.
 - **Improve code readability and maintainability:** Consistent commit messages make it easier to understand the history of changes and the reasoning
-    behind them.
+  behind them.
 
 **Commit Message Format:**
 
@@ -82,7 +82,6 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
 
 3. **Automated Rebase and Merge:**
     - Upon successful merge of a pull request into the `release` branch, an automated workflow attempts to rebase and merge `release` into `main`.
-    - This automated process only occurs if there are no merge conflicts.
 
 4. **Release Preparation:**
     - The `android-release.yml` workflow runs automatically on every push or (PR) merge to `release`.
@@ -105,17 +104,26 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
 ## Handling Merge Conflicts
 
 - **Automated Workflow:** The automated rebase and merge process is designed to handle straightforward merges efficiently. It will only perform
-    the merge if no conflicts are detected.
-    - Refer to the [auto/rebase-merge.sh documentation](.github/scripts/release/auto/README.md) for details about this script and its implications.
+  the merge if no conflicts are detected.
+    - Refer to the [auto/rebase-merge.sh documentation](.github/scripts/release/auto/README.md#autorebase-mergesh) for details about this script and its implications.
+
+
 - **Manual Script:** For complex merge scenarios or when conflicts arise, I created a dedicated script (`local/rebase-merge.sh`) to handle
-    merge conflicts and perform interactive rebases. This script provides a convenient way to resolve conflicts manually and ensure a clean merge.
-    - Refer to the [local/rebase-merge.sh documentation](.github/scripts/release/local/README.md) for detailed usage instructions and information.
+  merge conflicts and perform interactive rebases. This script provides a convenient way to resolve conflicts manually and ensure a clean merge.
+    - Refer to the [local/rebase-merge.sh documentation](.github/scripts/release/local/README.md#localrebase-mergesh) for detailed usage instructions and information.
 
-- **If your pull request cannot be merged automatically:** This can happen if other branches have been merged into `release` since you created your
-    feature branch. In such cases, you'll need to rebase your branch onto the updated `release` branch before creating the pull request.
-    Use the following command to rebase your branch: `git rebase release`
 
-This will replay your commits on top of the latest changes in `release`, ensuring a clean merge.
+- **Local Synchronization Script:** If the automated rebase and merge process fails for any reason, you can use the `local/sync-release.sh` script to
+  synchronize the `release` branch with the `main` branch. This allows you to manually handle the situation and ensure the `release` branch is up-to-date.
+    - Refer to the [local/sync-release.sh documentation](.github/scripts/release/local/README.md#localsync-releasesh) for detailed usage instructions and information.
+
+
+- **Avoid Pull Request Conflicts:** To minimize the risk of merge conflicts and ensure your pull requests can be merged smoothly, consider the following:
+    - You may want to check if the `release` branch is up-to-date with the `main` branch and run the `local/sync-release.sh` if needed.
+    - Keep your branch up-to-date: Regularly rebase your feature branch onto the updated `main` branch using the command: `git rebase main`.
+      This will incorporate the latest changes from `main` into your branch, reducing the likelihood of conflicts.
+    - Address potential conflicts early: If you are aware of potential conflicts with ongoing work in other branches,
+      coordinate with your team members and consider merging or rebasing your branch strategically to avoid major conflicts later.
 
 ## Branch Synchronization
 
