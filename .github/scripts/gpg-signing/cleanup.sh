@@ -1,13 +1,13 @@
 #!/bin/bash
 # Copyright 2024 MusTalK (https://github.com/mustalk)
-
+#
 # This script removes the GPG keys and related files used for signing commits during the CI process.
 # It ensures that sensitive information is securely deleted after the workflow completes.
-
-# Enable strict mode for more robust error handling
+#
+# Enable strict mode
 set -euo pipefail
 
-echo "Cleaning up GPG keys..."
+echo "Cleaning up GPG keys..." >&2
 
 # Check if fingerprint.fpr exists
 if [ -f fingerprint.fpr ]; then
@@ -15,20 +15,20 @@ if [ -f fingerprint.fpr ]; then
   FINGERPRINT=$(cat fingerprint.fpr)
 
   #Delete the secret key associated with the fingerprint
-  gpg --batch --quiet --yes --delete-secret-keys "$FINGERPRINT" || echo "Failed to delete secret key."
+  gpg --batch --quiet --yes --delete-secret-keys "$FINGERPRINT" || echo "Failed to delete secret key." >&2
 
   # Delete the public key associated with the fingerprint
-  gpg --batch --quiet --yes --delete-keys "$FINGERPRINT" || echo "Failed to delete public key."
+  gpg --batch --quiet --yes --delete-keys "$FINGERPRINT" || echo "Failed to delete public key." >&2
 
   # Securely delete the fingerprint file
   shred -u fingerprint.fpr
-  echo "Temp fingerprint file deleted."
+  echo "Temp fingerprint file deleted." >&2
 fi
 
 # Securely delete the Git environment file
 if [ -f git_env.sh ]; then
   shred -u git_env.sh
-  echo "Temp git environment file deleted."
+  echo "Temp git environment file deleted." >&2
 fi
 
-echo "GPG cleanup completed successfully."
+echo "GPG cleanup completed successfully." >&2

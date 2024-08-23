@@ -1,143 +1,365 @@
 #!/bin/bash
 # Copyright 2024 MusTalK (https://github.com/mustalk)
-
-# Rebase and Merge Script
-
-# This script automates the rebasing and merging of the release branch onto the main branch.
-# See the README.md in this directory for detailed documentation and important considerations.
-
+#
+# Auto Rebase and Merge Script
+#
+# This script automates the rebasing and merging of the release branch onto the main branch within a CI/CD pipeline..
+#
+# For more detailed documentation and important considerations, see the README.md file in this directory.
+#
 # Enable strict mode
 set -euo pipefail
 
-# Function to restore execute permissions to scripts
-restore_script_permissions() {
-    .github/scripts/utils/grant_exec_perms.sh
-}
+# Set the SCRIPT_OPERATION_MODE variable before sourcing core-utils.sh.
+# This variable should be set to "merge" or "sync" depending on the operation mode.
+export SCRIPT_OPERATION_MODE="merge"
 
-# Function to set failure output into env. variables, to be used by next workflow steps
-set_failure_output() {
-    local message=$1
-    echo "REBASE_MERGE_STATUS=failure" >> "$GITHUB_ENV"
-    echo "REBASE_MERGE_MESSAGE=$message" >> "$GITHUB_ENV"
-}
+# Enable / Disable debug mode for the logs.
+export DEBUG="true"
 
-# Function to set success output into env. variables, to be used by next workflow steps
-set_success_output() {
-    local message=$1
-    echo "REBASE_MERGE_STATUS=success" >> "$GITHUB_ENV"
-    echo "REBASE_MERGE_MESSAGE=$message" >> "$GITHUB_ENV"
-}
+# Source the core utilities script
+source .github/scripts/utils/auto/core-utils.sh
 
-# List of required environment variables
-required_vars=(GITHUB_REPOSITORY RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME)
+# List of required environment variables.
+REQUIRED_VARS=(GITHUB_REPOSITORY RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME)
 
-# Check if each required variable is set
-for var in "${required_vars[@]}"; do
-    if [ -z "${!var}" ]; then
-        echo "Error: Environment variable $var is not set."
-        exit 1
+# Function to check if all commits from release are already in main.
+# This function checks whether the main branch is up-to-date with the release branch.
+# If there are no new commits to merge, it logs a success message and exits.
+check_commits_up_to_date() {
+    local main_branch=$1
+    local release_branch=$2
+    local remote_name=$3
+    local operation_mode=$4
+    local ahead_commits=""
+    local commit_range=""
+
+    # Get the commit range between the main and release branches.
+    commit_range=$(get_commit_range "$main_branch" "$release_branch" "$remote_name")
+
+    # Get the list of commits ahead in the release branch.
+    ahead_commits="$(git log "$commit_range" --oneline)"
+
+    # If no commits are ahead, the branches are already up-to-date.
+    if [[ -z "$ahead_commits" ]]; then
+        handle_success "No $operation_mode needed, \`$remote_name/$main_branch\` is already up-to-date with \`$remote_name/$release_branch\`." "false"
     fi
-done
+}
 
-# Make sure we run the script from the root directory of the repository
-cd "$(git rev-parse --show-toplevel)"
+# Function to handle the success case after a successful merge.
+# This function handles post-merge operations, including pushing the merged branch.
+# to the remote repository, formatting commit messages, checking for any remaining differences
+# between branches, and logging the final success message.
+handle_successful_merge() {
+    local status_commit_messages=$1
+    local branch_release=$2
+    local branch_main=$3
+    local remote_name=$4
+    local operation_mode=$5
+    local ff_merge=${6:-"true"}
 
-echo "Starting rebase of $RELEASE_BRANCH onto $MAIN_BRANCH ..."
+    # Push the updated main branch to the remote repository.
+    run_cmd git push "$remote_name" "$branch_main" || handle_failure "Error: Failed to push changes to \`$remote_name/$branch_main\`."
 
-# Fetch the latest changes from the remote repository
-git fetch "$REMOTE_NAME" && echo "Successfully fetched changes from $REMOTE_NAME"
-
-# Perform a dry run of git clean to see which files would be removed
-git clean -fd --dry-run
-
-# Ensure a clean working directory, on our CI environment
-git reset --hard HEAD
-
-# Remove untracked files and directories from the working directory (if present in any scenario)
-git clean -fd
-
-# Checkout the release branch and ensure it tracks the remote branch
-git checkout --force -B "$RELEASE_BRANCH" "$REMOTE_NAME/$RELEASE_BRANCH"
-
-# Ensure the branch is up to date
-git pull "$REMOTE_NAME" "$RELEASE_BRANCH"
-
-# Checkout the main branch and ensure it tracks the remote branch
-git checkout --force -B "$MAIN_BRANCH" "$REMOTE_NAME/$MAIN_BRANCH"
-
-# Ensure the branch is up to date
-git pull "$REMOTE_NAME" "$MAIN_BRANCH"
-
-# Switch back to the release branch
-git checkout "$RELEASE_BRANCH"
-
-# Get commit messages to be included in the merge
-COMMIT_RANGE="$REMOTE_NAME/$MAIN_BRANCH..$REMOTE_NAME/$RELEASE_BRANCH"
-COMMIT_MESSAGES=$(git log --pretty="%H %h %s" "$COMMIT_RANGE")
-
-# Ensure the GPG agent is running
-gpgconf --launch gpg-agent
-
-# Rebase using the default ort strategy with -X theirs for conflict resolutions, favoring the release branch changes.
-# Refer to the README.md in this directory for more details about the reasoning behind using this strategy
-if git rebase -X theirs "$MAIN_BRANCH"; then
-    echo "Rebase completed successfully."
-    # Checkout the main branch
-    git checkout "$MAIN_BRANCH"
-
-    # Fast-forward merge to the rebased release branch
-    if git merge --ff-only "$RELEASE_BRANCH"; then
-        echo "Successfully merged $RELEASE_BRANCH into $MAIN_BRANCH using fast-forward"
-
-        # Push the updated main branch to the remote repository
-        git push "$REMOTE_NAME" "$MAIN_BRANCH" && echo "Successfully pushed changes to $REMOTE_NAME/$MAIN_BRANCH"
-
-        # Restore execute permissions to the scripts after the previous checkouts and merge
-        restore_script_permissions
-
-        # Store the success message
-        message="Rebase and merge of $RELEASE_BRANCH onto $MAIN_BRANCH completed successfully using fast-forward."
-
-        # Append commit messages if any
-        if [[ -n "$COMMIT_MESSAGES" ]]; then
-            # Format the merged commit messages and append them to the status message
-            message+="\n\nThe following commits were included in the merge:\n\n"
-            formatted_messages=$(.github/scripts/utils/format_commits.sh "$COMMIT_MESSAGES")
-            message+="$formatted_messages"
-        fi
-
-        # Set success output
-        set_success_output "$message"
+    # Store the success message.
+    if [[ "$ff_merge" == "true" ]]; then
+        local message="Rebase and Fast-Forward merge of \`$branch_release\` into \`$branch_main\` completed successfully."
     else
-        # Fetch the latest changes from the remote repository
-        git fetch "$REMOTE_NAME" && echo "Successfully fetched changes from $REMOTE_NAME"
-
-        # Checkout the release branch back to ensure the CI process can continue executing
-        # with the files existing on the release branch even if the merge fails.
-        git checkout "$RELEASE_BRANCH"
-
-        # Store the failure message
-        message="The fast-forward merge of the rebased $RELEASE_BRANCH onto $MAIN_BRANCH failed due to conflicts! Please resolve manually."
-
-        # Set failure output
-        set_failure_output "$message"
-
-        # Restore execute permissions to the scripts after the previous checkouts
-        restore_script_permissions
+        local message="Rebase and Standard merge of \`$branch_release\` into \`$branch_main\` completed successfully."
     fi
-else
-    # Store the failure message
-    message="Rebase of $RELEASE_BRANCH onto $MAIN_BRANCH failed due to conflicts! Please resolve manually."
 
-    # Abort the rebase on merge conflicts
-    git rebase --abort
-
-    # Set failure output
-    set_failure_output "$message"
-
-    # Restore execute permissions to the scripts after the previous checkouts
+    # Restore execute permissions to the scripts before running them.
     restore_script_permissions
-fi
 
-# Echo the message to the log
-echo -e "$message"
+    # Format the merged commit messages and append them to the status message.
+    message="$(format_commit_messages "$status_commit_messages" "$message" "$GITHUB_REPOSITORY")"
+
+    # Check for unmerged commits and/or file content differences.
+    # on main and append the output to the status message to make investigating conflicts easier.
+    message+="$(get_branch_diffs "$branch_release" "$branch_main" "$remote_name" "$operation_mode")"
+
+    # We don't restore perms here as we did it a few steps earlier already.
+    handle_success "$message" "false"
+}
+
+# Function to handle a single commit merge.
+# This function performs a squash merge when there is only one commit in the release branch.
+# It handles deleted and renamed files and creates a new commit with the last commit message from the release branch.
+merge_single_commit() {
+    local branch_release=$1
+    local branch_main=$2
+    local deleted_files=$3
+    local renamed_files=$4
+
+    # Get the last commit message.
+    LAST_COMMIT="$(git log -1 --pretty=format:'%H %h %s' "$branch_release")"
+    # Extract commit title.
+    LAST_COMMIT_TITLE="$(echo "$LAST_COMMIT" | cut -d' ' -f3-)"
+    # Extract commit body.
+    LAST_COMMIT_MSG="$(git log -1 --pretty=format:'%B' "$branch_release")"
+
+    # Check if the commit message already exists in main.
+    if run_cmd check_commit_message_exists "$LAST_COMMIT_MSG" "$branch_main"; then
+        LAST_COMMIT_MSG="Merge '$branch_release'\n$LAST_COMMIT_MSG"
+    fi
+
+    # Perform a merge with -X theirs strategy favoring release and create a squash commit with the last release commit message.
+    if run_cmd git merge -X theirs --squash --stat --allow-unrelated-histories "$branch_release"; then
+
+        # Handle deleted and renamed files that didn't reflect the correct state after the merge.
+        handle_deleted_and_renamed_files "$deleted_files" "$renamed_files"
+
+        # Create a new commit with the last commit message from release, using a temporary file, to preserve the commit formatting.
+        commit_with_temp_file "$LAST_COMMIT_MSG"
+
+        handle_info "Squash merged single commit from \`$branch_release\` into \`$branch_main\`."
+
+        # Update commit messages merged for logs.
+        echo "$LAST_COMMIT"
+    else
+        # Abort merge if in progress.
+        if run_cmd git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            run_cmd git merge --abort || true
+        fi
+        failure_message="The single squash commit merge of \`$branch_release\` into \`$branch_main\` failed! Please resolve manually.\n"
+        failure_message+="Attempted to merge:\n* $LAST_COMMIT_TITLE"
+        handle_failure "$failure_message"
+    fi
+}
+
+# Function to handle multiple commits merge.
+# This function performs a standard merge when there are multiple commits in the release branch.
+# It handles deleted and renamed files during the merge process and commits the changes with an appropriate message.
+merge_multiple_commits() {
+    local branch_release=$1
+    local branch_main=$2
+    local deleted_files=$3
+    local renamed_files=$4
+
+    # Gather commit messages and capture both merge commit and status commit messages into an array.
+    mapfile -t commit_messages < <(gather_commit_messages "$branch_release" "$branch_main")
+
+    # Assign array elements to the variables.
+    MERGE_MSG="${commit_messages[0]}"
+    STATUS_MSG="${commit_messages[1]}"
+
+    # Perform a standard merge with the gathered commit messages.
+    handle_info "Starting a standard merge for branch \`$branch_release\` into \`$branch_main\`."
+    if run_cmd git merge -X theirs --no-ff --stat --no-commit --allow-unrelated-histories "$branch_release"; then
+
+        # Handle deleted and renamed files that didn't reflect the correct state after the merge.
+        handle_deleted_and_renamed_files "$deleted_files" "$renamed_files"
+
+        # Commit the merge with the gathered commit message using a temporary file, to preserve the commit formatting.
+        commit_with_temp_file "$MERGE_MSG"
+
+        handle_info "Successfully merged multiple commits from \`$branch_release\` into \`$branch_main\`."
+
+        # Update commit messages merged for logs.
+        echo "$STATUS_MSG"
+    else
+        # Abort merge if in progress.
+        if run_cmd git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            run_cmd git merge --abort || true
+        fi
+        failure_message="The multiple commits merge of \`$branch_release\` into \`$branch_main\` failed! Please resolve manually.\n"
+        failure_message+="Attempted to merge:\n$MERGE_MSG"
+        handle_failure "$failure_message"
+    fi
+}
+
+# Function to start the standard merge process.
+# Depending on the number of commits in the release branch, this function will handle
+# either a single commit or multiple commits during the merge process.
+start_standard_merge_process() {
+    local branch_release=$1
+    local branch_main=$2
+    local deleted_files=$3
+    local renamed_files=$4
+
+    # Initialize variable to capture the success commit messages.
+    local status_commit_messages=""
+
+    # Debugging the difference between the main and release branches.
+    run_cmd git diff --name-status "$branch_main" "$branch_release"
+
+    # Determine the number of commits in the release branch that are not in the main branch.
+    if check_multiple_commits "$branch_release" "$branch_main"; then
+        # Handle multiple commits merge.
+        status_commit_messages=$(merge_multiple_commits "$branch_release" "$branch_main" "$deleted_files" "$renamed_files")
+    else
+        # Handle single commit merge.
+        status_commit_messages=$(merge_single_commit "$branch_release" "$branch_main" "$deleted_files" "$renamed_files")
+    fi
+
+    echo "$status_commit_messages"
+}
+
+# Function to perform a standard merge when there are deleted files.
+# This function ensures that the main branch is checked out before merging
+# and uses the `start_standard_merge_process` function to handle the merge.
+perform_standard_merge() {
+    local release_branch=$1
+    local main_branch=$2
+    local remote_name=$3
+    local operation_mode=$4
+    local deleted_files=$5
+    local renamed_files=$6
+    local status_commit_messages=""
+
+    handle_info "Starting standard merge process..."
+
+    # Ensure we are on the main branch before the merge process.
+    run_cmd git checkout "$main_branch"
+
+    # Start the standard merge process, passing the deleted and renamed files for handling.
+    status_commit_messages=$(start_standard_merge_process "$release_branch" "$main_branch" "$deleted_files" "$renamed_files")
+
+    # Handle the successful merge with appropriate status messages.
+    handle_successful_merge "$status_commit_messages" "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "false"
+}
+
+# Function to handle the rebase and fast-forward merge process.
+# This function checks out the release branch, performs a rebase onto the main branch,
+# and then attempts a fast-forward merge. It handles the outcome of the operation.
+perform_rebase_and_ff_merge() {
+    local release_branch=$1
+    local main_branch=$2
+    local remote_name=$3
+    local operation_mode=$4
+    local commit_range=""
+    local status_commit_messages=""
+
+    # Ensure we are on the release branch before rebase.
+    run_cmd git checkout "$release_branch"
+
+    # Get the range of commits that will be covered by the rebase.
+    commit_range=$(get_commit_range "$main_branch" "$release_branch" "$remote_name")
+    status_commit_messages="$(git log --pretty="%H %h %s" "$commit_range")"
+
+    # Rebase using the default ort strategy with -X theirs for conflict resolutions, favoring the release branch changes.
+    # Refer to the README.md in this directory for more details about the reasoning behind using this strategy.
+    if run_cmd git rebase -X theirs "$main_branch"; then
+        handle_info "Successfully rebased \`$release_branch\` onto \`$main_branch\`."
+        run_cmd git checkout "$main_branch"
+        if run_cmd git merge --ff-only "$release_branch"; then
+            # Handle the successful merge with appropriate status messages.
+            handle_successful_merge "$status_commit_messages" "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "true"
+        else
+            handle_failure "The fast-forward merge of \`$release_branch\` into \`$main_branch\` failed! Please resolve manually."
+        fi
+    else
+        handle_failure "The rebase of \`$release_branch\` onto \`$main_branch\` failed! Please resolve manually."
+    fi
+}
+
+# Function to handle informational logs and return whether to perform a standard merge or rebase.
+# This function checks for deleted files, renamed files, or multiple commits in the release branch.
+# It determines whether to proceed with a standard merge or a rebase and fast-forward merge based on these conditions.
+evaluate_merge_strategy() {
+    local deleted_files=$1
+    local renamed_files=$2
+    local release_branch=$3
+    local main_branch=$4
+
+    # Check for multiple commits or deleted/renamed files.
+    if [[ -n "$deleted_files" ]] || [[ -n "$renamed_files" ]] || check_multiple_commits "$release_branch" "$main_branch"; then
+        if [[ -n "$deleted_files" && -n "$renamed_files" ]]; then
+            handle_info "There are both deleted and renamed files in \`$release_branch\`:\nDeleted:\n$deleted_files\nRenamed:\n$renamed_files"
+            handle_info "Performing standard merge instead of rebase."
+        elif [[ -n "$deleted_files" ]]; then
+            handle_info "There are deleted files in \`$release_branch\` but not in \`$main_branch\`:\n$deleted_files"
+            handle_info "Performing standard merge instead of rebase."
+        elif [[ -n "$renamed_files" ]]; then
+            handle_info "There are renamed files in \`$release_branch\` but not in \`$main_branch\`:\n$renamed_files"
+            handle_info "Performing standard merge instead of rebase."
+        else
+            handle_info "Multiple commits detected in \`$release_branch\` but not in \`$main_branch\`.\nPerforming standard merge instead of rebase."
+        fi
+        # Indicate that a standard merge should be performed.
+        return 0
+    fi
+    # Indicate that a rebase and fast-forward merge should be performed.
+    return 1
+}
+
+# Function to start the rebase and merge process.
+# This function checks for deleted files and multiple commits between the release and main branches.
+# If deleted files are found or multiple commits exist, it triggers a standard merge,
+# otherwise, it performs a rebase and fast-forward merge.
+start_rebase_merge_process() {
+    local release_branch=$1
+    local main_branch=$2
+    local remote_name=$3
+    local operation_mode=$4
+    local deleted_files
+    local renamed_files
+
+    # Check for deleted files in the release branch compared to the main branch.
+    deleted_files=$(get_deleted_files "$main_branch" "$release_branch")
+
+    # Check for renamed files in the release branch compared to the main branch.
+    renamed_files=$(get_renamed_files "$main_branch" "$release_branch")
+
+    # Decide whether to perform standard merge or rebase.
+    if evaluate_merge_strategy "$deleted_files" "$renamed_files" "$release_branch" "$main_branch"; then
+        perform_standard_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$deleted_files" "$renamed_files"
+    else
+        # Perform a rebase and fast-forward merge if no deleted/renamed files and only one commit.
+        perform_rebase_and_ff_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+    fi
+}
+
+# Main function to execute the rebase and merge process.
+# This is the entry point of the script.
+main() {
+    local remote_name="$1"
+    local main_branch="$2"
+    local release_branch="$3"
+    local operation_mode="$4"
+
+    # Set up logging for the script.
+    # This ensures that all relevant output is captured in a log file.
+    setup_logging
+
+    # Check if all required environment variables are set.
+    # This prevents the script from running if crucial variables are missing.
+    check_required_vars "${REQUIRED_VARS[@]}"
+
+    # Ensure that the script is running in the root directory of the repository.
+    # This is necessary to avoid path issues during Git operations.
+    ensure_repo_root
+
+    # Ensure that the GPG agent is running for signing commits.
+    # This is required to sign commits.
+    ensure_gpg_agent
+
+    # Fetch the latest changes from the remote repository.
+    # This ensures that the local branches are up-to-date with the remote.
+    fetch_remote_branch "$remote_name"
+
+    # Check if the release branch has any new commits that need to be merged into the main branch.
+    # If the main branch is already up-to-date, the script will exit early with a success message.
+    check_commits_up_to_date "$main_branch" "$release_branch" "$remote_name" "$operation_mode"
+
+    # Log an informational message indicating the start of the rebase and merge process.
+    handle_info "Starting $SCRIPT_OPERATION_MODE of \`$release_branch\` into \`$main_branch\` ..."
+
+    # Ensure that the working directory is clean before proceeding.
+    # This prevents conflicts caused by untracked files or changes in the working directory.
+    ensure_clean_working_directory
+
+    # Check out the main branch and ensure it is tracking the remote branch.
+    checkout_and_track_branch "$main_branch" "$remote_name"
+
+    # Check out the release branch and ensure it is tracking the remote branch.
+    checkout_and_track_branch "$release_branch" "$remote_name"
+
+    # Start the rebase and merge process.
+    # This is the core operation where the release branch is rebased onto the main branch,
+    # and the result is either fast-forwarded or merged depending on the situation.
+    start_rebase_merge_process "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+}
+
+# Execute the main function with the provided remote name, main branch, release branch, and operation_mode.
+main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE"

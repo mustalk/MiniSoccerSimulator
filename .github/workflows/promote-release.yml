@@ -1,17 +1,23 @@
 # Copyright 2024 MusTalK (https://github.com/mustalk)
 
-# This workflow automatically promotes the release branch to the main branch, executing a rebase & merge when a pull request is closed and merged.
+# Release to Main Workflow
 
-# It includes GPG signing of commits to ensure authenticity and integrity and sends a Slack notification about the result.
+# Automates the promotion of the release branch to the main branch after a pull request is merged.
+
+# Actions performed:
+# - Rebase and Merge: Rebases the release branch onto the main branch and merges the changes.
+# - Synchronize Release: Synchronizes the release branch with the updated main branch to prevent future merge conflicts.
+# - Slack Notifications: Sends Slack notifications for the rebase-merge and synchronization processes, indicating success, warning, or skipped status.
+
+# Ensures a streamlined process for promoting changes and maintaining branch consistency with clear communication through Slack.
+
+# All git operations include GPG signing of commits for authenticity and integrity.
 
 name: Release to Main
 on:
   pull_request:
     types: [closed]
     branches: [ release ]
-
-permissions:
-  contents: write
 
 jobs:
   promote-release:
@@ -25,6 +31,8 @@ jobs:
       # Checks out the repository
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # Promote the release, execute a rebase & merge release branch into main with GPG signing
       - name: Promote Release (Rebase & Merge)
@@ -38,18 +46,47 @@ jobs:
           gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
           github-repository: ${{ github.event.repository.name }}
 
-
       # Send Slack notification
-      - name: Send Slack notification
+      - name: Send Slack notification (Promote Release)
         if: always()
         uses: rtCamp/action-slack-notify@v2
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_GITHUB_WEBHOOK_URL }}
           SLACK_CHANNEL: ${{ env.ACTIONS_GITHUB_SLACK_CHANNEL }}
           SLACK_USERNAME: ${{ env.ACTIONS_BOT_USERNAME }}
-          SLACK_TITLE: ${{ env.REBASE_MERGE_STATUS == 'success' && 'Merge Release :white_check_mark:' || 'Merge Release :x:' }}
-          SLACK_COLOR: ${{ env.REBASE_MERGE_STATUS == 'success' && 'good' || 'danger' }}
-          SLACK_MESSAGE: ${{ env.REBASE_MERGE_MESSAGE }}
+          SLACK_TITLE: ${{ env.PROMOTE_RELEASE_STATUS == 'success' && 'Merge Release :white_check_mark:' || env.PROMOTE_RELEASE_STATUS == 'warning' && 'Merge Release :warning:' || 'Merge Release :x:' }}
+          SLACK_COLOR: ${{ env.PROMOTE_RELEASE_STATUS == 'success' && 'good' || env.PROMOTE_RELEASE_STATUS == 'warning' && '#FAE52F' || env.PROMOTE_RELEASE_STATUS == 'skipped' && '#6D6D6D' || 'danger' }}
+          SLACK_MESSAGE: ${{ env.PROMOTE_RELEASE_STATUS == 'skipped' && 'Promote Release Skipped due to an unexpected error' || env.PROMOTE_RELEASE_MESSAGE }}
+          SLACKIFY_MARKDOWN: true
+          ENABLE_ESCAPES: true
+          SLACK_FOOTER: ''
+
+      # Synchronize the release branch with main after the rebase-merge.
+      # This ensures that the release branch reflects the latest state of main,
+      # because commit hashes change after the rebase-merge process into main.
+      # With this we avoid potential merge conflicts in the future.
+      - name: Synchronize Release
+        id: sync-release
+        if: env.PROMOTE_RELEASE_STATUS == 'success'
+        uses: ./.github/actions/execute/sync-release
+        with:
+          release-branch: 'release'
+          main-branch: 'main'
+          remote-name: 'origin'
+          gpg-key: ${{ secrets.BOT_GPG_PKEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+
+      # Send Slack notification for Synchronize Release
+      - name: Send Slack notification (Synchronize Release)
+        if: always() && env.PROMOTE_RELEASE_STATUS == 'success'
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_GITHUB_WEBHOOK_URL }}
+          SLACK_CHANNEL: ${{ env.ACTIONS_GITHUB_SLACK_CHANNEL }}
+          SLACK_USERNAME: ${{ env.ACTIONS_BOT_USERNAME }}
+          SLACK_TITLE: ${{ env.SYNC_RELEASE_STATUS == 'success' && 'Sync Release :white_check_mark:' || env.SYNC_RELEASE_STATUS == 'warning' && 'Sync Release :warning:' || 'Sync Release :x:' }}
+          SLACK_COLOR: ${{ env.SYNC_RELEASE_STATUS == 'success' && 'good' || env.SYNC_RELEASE_STATUS == 'warning' && '#FAE52F' || env.SYNC_RELEASE_STATUS == 'skipped' && '#6D6D6D' || 'danger' }}
+          SLACK_MESSAGE: ${{ env.SYNC_RELEASE_STATUS == 'skipped' && 'Sync Release Skipped due to Promote Release or an unexpected error' || env.SYNC_RELEASE_MESSAGE }}
           SLACKIFY_MARKDOWN: true
           ENABLE_ESCAPES: true
           SLACK_FOOTER: ''
