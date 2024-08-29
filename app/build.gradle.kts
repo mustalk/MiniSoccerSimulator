@@ -64,8 +64,8 @@ android {
         // IMPORTANT: Versioning is fully automated based on conventional commit messages, managed by semantic-release.
         // Follows Semantic Versioning (semver.org) and conventional commits (conventionalcommits.org).
         // Do NOT edit version components manually! See android-deploy.yml workflow and .releaserc.js for more details.
-        val versionMajor = 0
-        val versionMinor = 1
+        val versionMajor = 1
+        val versionMinor = 0
         val versionPatch = 0
 
         applicationId = "com.mustalk.minisimulator"
