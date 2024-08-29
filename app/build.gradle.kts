@@ -61,11 +61,18 @@ android {
     compileSdk = 34
 
     defaultConfig {
+        // IMPORTANT: Versioning is fully automated based on conventional commit messages, managed by semantic-release.
+        // Follows Semantic Versioning (semver.org) and conventional commits (conventionalcommits.org).
+        // Do NOT edit version components manually! See android-deploy.yml workflow and .releaserc.js for more details.
+        val versionMajor = 0
+        val versionMinor = 1
+        val versionPatch = 0
+
         applicationId = "com.mustalk.minisimulator"
         minSdk = 23
         targetSdk = 34
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = versionMajor * 10000 + versionMinor * 100 + versionPatch
+        versionName = "$versionMajor.$versionMinor.$versionPatch"
 
         testInstrumentationRunner = "com.mustalk.minisimulator.HiltTestRunner"
     }

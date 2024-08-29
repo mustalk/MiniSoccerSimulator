@@ -15,22 +15,22 @@ set -euo pipefail
 export SCRIPT_OPERATION_MODE="sync"
 
 # Enable / Disable debug mode for the logs
-export DEBUG="true"
+export DEBUG="false"
 
 # Source the core utilities script.
 source .github/scripts/utils/auto/core-utils.sh
 
 # List of required environment variables.
-REQUIRED_VARS=(RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME)
+REQUIRED_VARS=(RELEASE_BRANCH MAIN_BRANCH REMOTE_NAME DIFF_EXCLUDE_FILES)
 
 # Function to check if all commits from release are already in main.
 # This function checks whether the main branch is up-to-date with the release branch.
 # If there are no new commits to merge, it logs a success message and exits.
 check_commits_up_to_date() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
     local ahead_commits=""
     local commit_range=""
 
@@ -56,15 +56,16 @@ check_commits_up_to_date() {
 # Function to handle differences between the release and main branches.
 # and decide on the appropriate actions based on the detected differences.
 handle_branch_diffs() {
-    local release_branch=$1
-    local main_branch=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local release_branch="$1"
+    local main_branch="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
+    local diff_excluded_files="$5"
     local diff_message=""
 
     # Check for differences between the release and main branches,
     # and capture the output in the diff_message variable.
-    diff_message=$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode")
+    diff_message=$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files")
 
     # Based on the content of diff_message, decide on the appropriate course of action.
     # If the message contains "INFO:", log it as an informational message.
@@ -81,9 +82,9 @@ handle_branch_diffs() {
 # Function to synchronize the release branch with the main branch by performing a rebase.
 # This function attempts to rebase the release branch onto the main branch.
 start_release_sync_process() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
 
     # Attempt to rebase the release branch onto the main branch.
     # If the rebase is successful, proceed to push the changes.
@@ -99,9 +100,9 @@ start_release_sync_process() {
 # The changes are force-pushed to ensure that the remote branch is updated
 # with the rebased history from the main branch.
 push_release_branch() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
 
     # Force push the rebased release branch to the remote repository using the --force-with-lease option.
     # If the push is successful, trigger the success handler.
@@ -116,18 +117,20 @@ push_release_branch() {
 # Main function to execute the sync process.
 # This is the entry point of the script.
 main() {
+    # Check if all required environment variables are set.
+    # This prevents the script from running if crucial variables are missing.
+    check_required_vars "${REQUIRED_VARS[@]}"
+
+    # Capture script variables
     local remote_name="$1"
     local main_branch="$2"
     local release_branch="$3"
     local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Set up logging for the script.
     # This ensures that all relevant output is captured in a log file.
     setup_logging
-
-    # Check if all required environment variables are set.
-    # This prevents the script from running if crucial variables are missing.
-    check_required_vars "${REQUIRED_VARS[@]}"
 
     # Ensure that the script is running in the root directory of the repository.
     # This is necessary to avoid path issues during Git operations.
@@ -142,7 +145,7 @@ main() {
     check_commits_up_to_date "$main_branch" "$release_branch" "$remote_name" "$operation_mode"
 
     # Handle any differences found between the branches.
-    handle_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+    handle_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files"
 
     # Log an informational message indicating the start of the sync process.
     handle_info "Starting $operation_mode of \`$release_branch\` with \`$main_branch\` ..."
@@ -161,5 +164,5 @@ main() {
     start_release_sync_process "$main_branch" "$release_branch" "$remote_name"
 }
 
-# Execute the main function with the provided remote name, main branch, release branch, and operation_mode.
-main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE"
+# Execute the main function with the provided environment variables.
+main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE" "$DIFF_EXCLUDE_FILES"

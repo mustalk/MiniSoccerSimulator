@@ -1,5 +1,5 @@
 name: 'Promote release'
-description: 'Promotes a release with rebase & merge using GPG signing. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+description: 'Promotes a release with rebase & merge with GPG signing. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 inputs:
   release-branch:
@@ -22,6 +22,12 @@ inputs:
     required: true
   github-repository:
     description: 'GitHub repository'
+    required: true
+  changelog-file-path:
+    description: 'Path to the CHANGELOG.md file.'
+    required: true
+  gradle-file-path:
+    description: 'Path to the Gradle file.'
     required: true
 
 runs:
@@ -50,17 +56,26 @@ runs:
         BOT_GPG_PKEY: ${{ inputs.gpg-key }}
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
 
-    # Runs the rebase-release script if previous steps succeeded,
+    # Construct DIFF_EXCLUDE_FILES dynamically (Pipe-separated list of files to be excluded from the diff check after the semantic release run)
+    - name: Construct DIFF_EXCLUDE_FILES variable
+      id: construct-exclude-files
+      run: echo "DIFF_EXCLUDE_FILES=${{ inputs.changelog-file-path }}|${{ inputs.gradle-file-path }}" >>"$GITHUB_ENV"
+      shell: bash
+      # Documentation: Constructs the DIFF_EXCLUDE_FILES variable by combining the changelog-file-path
+      # and gradle-file-path into a pipe-separated string for exclusion in diff checks.
+
+    # Runs the promote-release script if previous steps succeeded,
     # using provided branch names and GPG passphrase for signing.
     - name: Rebase release onto main
       if: success()
-      run: .github/scripts/release/auto/rebase-merge.sh
+      run: .github/scripts/release/auto/promote-release.sh
       shell: bash
       env:
         GITHUB_REPOSITORY: ${{ inputs.github-repository }}
         RELEASE_BRANCH: ${{ inputs.release-branch }}
         MAIN_BRANCH: ${{ inputs.main-branch }}
         REMOTE_NAME: ${{ inputs.remote-name }}
+        DIFF_EXCLUDE_FILES: ${{ env.DIFF_EXCLUDE_FILES }}
 
     # Runs the GPG cleanup script to remove the GPG agent and key.
     - name: Cleanup GPG

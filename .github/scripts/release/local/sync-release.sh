@@ -28,6 +28,8 @@ MAIN_BRANCH="main"
 # Define remote name (modify if needed)
 REMOTE_NAME="origin"
 
+DIFF_EXCLUDE_FILES="CHANGELOG.md|app/build.gradle.kts"
+
 # Set to "true" to enable automatic push after successful rebase sync, "false" to disable
 SUCCESS_AUTO_PUSH="false"
 
@@ -42,10 +44,10 @@ backup_branch=""
 # This function checks whether the main branch is up-to-date with the release branch.
 # If there are no new commits to merge, it logs a success message and exits.
 check_commits_up_to_date() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
     local ahead_commits=""
     local commit_range=""
 
@@ -72,7 +74,7 @@ check_commits_up_to_date() {
 # This function resets the main branch to match the state of the release branch.
 # If auto-push is enabled, the changes will be force-pushed to the remote repository.
 reset_main_to_release() {
-    local auto_push=$1
+    local auto_push="$1"
     git checkout "$MAIN_BRANCH"
     git reset --hard "$RELEASE_BRANCH"
     if [[ "$auto_push" == "true" ]]; then
@@ -96,10 +98,10 @@ reset_main_to_release() {
 # This function presents the user with options to resolve conflicts that arise
 # when synchronizing the release branch with the main branch.
 resolve_conflict_options() {
-    local diff_message=$1
-    local main_branch=$2
-    local release_branch=$3
-    local conflict_auto_push=$4
+    local diff_message="$1"
+    local main_branch="$2"
+    local release_branch="$3"
+    local conflict_auto_push="$4"
 
     echo -e "$diff_message"
     echo -e "\nHow would you like to resolve this:"
@@ -132,10 +134,11 @@ resolve_conflict_options() {
 # Function to handle differences between the release and main branches
 # and decide on the appropriate actions based on the detected differences.
 handle_branch_diffs() {
-    local release_branch=$1
-    local main_branch=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local release_branch="$1"
+    local main_branch="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
+    local diff_excluded_files="$5"
     local diff_message=""
 
     # Un-stash changes (so that the check-branch-diffs.sh permission is restored to run the script)
@@ -146,7 +149,7 @@ handle_branch_diffs() {
 
     # As a safety net, check for differences between the release and main branches,
     # and capture the output in the diff_message variable.
-    diff_message=$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode")
+    diff_message=$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files")
 
     # Based on the content of diff_message, decide on the appropriate course of action.
     # If the message contains "INFO:", log it as an informational message.
@@ -172,9 +175,9 @@ handle_branch_diffs() {
 # The changes are force-pushed to ensure that the remote branch is updated
 # with the rebased history from the main branch.
 push_release_branch() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
 
     # Force push the rebased release branch to the remote repository using the --force-with-lease option.
     # If the push is successful, trigger the success handler.
@@ -190,9 +193,9 @@ push_release_branch() {
 # Function to synchronize the release branch with the main branch by performing a rebase.
 # This function attempts to rebase the release branch onto the main branch.
 start_release_sync_process() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
 
     # Attempt to rebase the release branch onto the main branch.
     # If the rebase is successful, proceed to push the changes.
@@ -225,6 +228,7 @@ main() {
     local main_branch="$2"
     local release_branch="$3"
     local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Ensure that the script is running in the root directory of the repository.
     ensure_repo_root
@@ -258,7 +262,7 @@ main() {
     backup_branch=$(create_backup_branch "$main_branch" "$operation_mode")
 
     # Handle any differences found between the branches.
-    handle_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+    handle_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files"
 
     # Log an informational message indicating the start of the sync process.
     handle_info "Starting $operation_mode of \`$release_branch\` with \`$main_branch\` ..."
@@ -268,4 +272,4 @@ main() {
 }
 
 # Execute the main function with the provided remote name, main branch, release branch, and operation_mode.
-main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE"
+main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE" "$DIFF_EXCLUDE_FILES"

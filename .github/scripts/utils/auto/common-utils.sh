@@ -175,6 +175,16 @@ handle_success() {
     exit 0
 }
 
+# Function to log warning messages
+# This function sanitizes and logs a warning message.
+handle_warning() {
+    local message
+    message=$(sanitize_message "$1")
+
+    # Prefix each non-empty line of the message with "WARNING: "
+    echo -e "$message" | sed '/^$/!s/^/WARNING: /' >&2
+}
+
 # Function to handle informational messages
 # This function logs informational messages prefixed with "INFO:".
 # The messages are sanitized and sent to stderr.

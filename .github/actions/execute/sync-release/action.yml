@@ -1,5 +1,5 @@
 name: 'Sync release'
-description: 'Synchronizes the release branch with main after a rebase-merge. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+description: 'Synchronizes the release branch with main after a promote-release. | Copyright 2024 MusTalK (https://github.com/mustalk)'
 
 inputs:
   release-branch:
@@ -19,6 +19,12 @@ inputs:
     required: true
   gpg-passphrase:
     description: 'The passphrase for GPG signing.'
+    required: true
+  changelog-file-path:
+    description: 'Path to the CHANGELOG.md file.'
+    required: true
+  gradle-file-path:
+    description: 'Path to the Gradle file.'
     required: true
 
 runs:
@@ -47,7 +53,15 @@ runs:
         BOT_GPG_PKEY: ${{ inputs.gpg-key }}
         GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
 
-    # Synchronizes the release branch with main after a rebase-merge.
+    # Construct DIFF_EXCLUDE_FILES dynamically (Pipe-separated list of files to be excluded from the diff check after the semantic release run)
+    - name: Construct DIFF_EXCLUDE_FILES variable
+      id: construct-exclude-files
+      run: echo "DIFF_EXCLUDE_FILES=${{ inputs.changelog-file-path }}|${{ inputs.gradle-file-path }}" >>"$GITHUB_ENV"
+      shell: bash
+      # Documentation: Constructs the DIFF_EXCLUDE_FILES variable by combining the changelog-file-path
+      # and gradle-file-path into a pipe-separated string for exclusion in diff checks.
+
+    # Synchronizes the release branch with main after a promote-release.
     - name: Synchronize release branch
       if: success()
       run: .github/scripts/release/auto/sync-release.sh
@@ -56,6 +70,7 @@ runs:
         RELEASE_BRANCH: ${{ inputs.release-branch }}
         MAIN_BRANCH: ${{ inputs.main-branch }}
         REMOTE_NAME: ${{ inputs.remote-name }}
+        DIFF_EXCLUDE_FILES: ${{ env.DIFF_EXCLUDE_FILES }}
 
     # Runs the GPG cleanup script to remove the GPG agent and key.
     - name: Cleanup GPG

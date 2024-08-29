@@ -1,41 +1,41 @@
 # Copyright 2024 MusTalK (https://github.com/mustalk)
-
+#
 # Android Test Workflow
-
+#
 # This workflow automates the testing process for Android projects. It is designed to run tests on specific branches and pull requests,
 #    ensuring code quality and preventing regressions.
-
+#
 # Reasoning and Benefits:
-
+#
 # Targeted Execution: Tests are only executed on push events the on `main`, and development branches (following specific naming conventions),
 #   as well as on pull requests targeting the `release` branch. This prevents unnecessary test runs on branches that might not require
 #   testing, saving resources, and providing a developer-friendly CI process.
-
+#
 # Tests are executed only in the following scenarios:
 #  - Pushes to the `main` branch.
 #  - Pull requests targeting the`release` branch.
 #  - Pushes to development branches if there are no open PRs targeting the `release` branch.
-
+#
 # Enforced Branch Naming: By specifying branch patterns, the workflow encourages developers to follow consistent naming conventions,
 #   leading to a more organized and manageable repository.
-
+#
 # Conditional PR Testing: For pull requests from development branches, tests are only run if there is an open pull request targeting
 #   the `release` branch. This helps avoid redundant CI runs and ensures that changes are validated against the latest `release`
 #   candidate before being merged.
-
+#
 # Organized Workflow: Composite actions are used to encapsulate common tasks, improving workflow readability and maintainability.
 #   This also enhances the CI run logs by grouping related steps, making it easier to follow the workflow execution, debug issues,
 #   and track run times for optimization purposes.
-
+#
 # Clear Documentation: Each step includes a descriptive name and comment to explain its purpose, making the workflow easier to understand and maintain.
-
+#
 name: Android Test
 
 # Trigger workflow on push to specified branches and pull requests to release
 on:
   push:
     branches: [ main, 'feature/**', 'bugfix/**', 'chore/**',
-                'refactor/**', 'test/**', 'perf/**', 'build/**',
+                'refactor/**', 'perf/**', 'build/**', 'test/**',
                 'hotfix/**', 'experiment/**']
   pull_request:
     branches: [ release ]
@@ -47,8 +47,11 @@ permissions:
 
 jobs:
   android-test:
-    # Skip Android tests for CI and documentation branches, as they typically don't include app code changes.
-    if: "!startsWith(github.head_ref, 'ci/') && !startsWith(github.head_ref, 'docs/')"
+    # Skip Android tests for CI and documentation branches, and for semantic-release promotion commits, as they typically don't include app code changes.
+    if: |
+      !startsWith(github.head_ref, 'ci/') &&
+      !startsWith(github.head_ref, 'docs/') &&
+      !startsWith(github.event.head_commit.message, 'chore(release): promote release v')
     runs-on: ubuntu-latest
     env:
       SEGMENT_DOWNLOAD_TIMEOUT_MINS: 15
@@ -106,7 +109,7 @@ jobs:
         if: env.RUN_TESTS == 'true'
         uses: ./.github/actions/manage/gservices/restore
         with:
-          encoded-google-services-json: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
+          encoded-google-services: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
 
       # Runs unit tests and uploads test reports.
       - name: Execute Unit Tests

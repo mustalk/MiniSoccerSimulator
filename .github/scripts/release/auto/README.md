@@ -3,7 +3,7 @@
 This directory contains scripts that automate various aspects of the release process, ensuring a streamlined
 workflow for integrating changes, reducing manual intervention and maintaining a clean commit history.
 
-## auto/rebase-merge.sh
+## auto/promote-release.sh
 
 This script automates the process of rebasing and merging the `release` branch into the `main` branch.
 It is designed to be used within a CI/CD pipeline and relies on environment variables set by the workflow,
@@ -12,7 +12,7 @@ and is triggered automatically by the CI workflow after a PR targeting the `rele
 ### Motivation
 
 The goal was to create a streamlined workflow for integrating changes while maintaining a clean commit history
-and minimizing manual interventions to reduce the potential for human error. To achieve this, a rebase-merge approach
+and minimizing manual interventions to reduce the potential for human error. To achieve this, a rebase & merge approach
 was chosen, which integrates changes from the release branch into the main branch without creating unnecessary merge commits.
 This helps keep the commit history clean and linear, and avoids cluttering the pull request list with unnecessary PRs.
 
@@ -26,7 +26,7 @@ This issue is documented in [Issue #12](https://github.com/mustalk/MiniSoccerSim
 
 To address this, the script uses the default `ort` rebase strategy with the `-X theirs` option.
 This automatically resolves merge conflicts in favor of the `release` branch, which is the only entry point to the main branch in our workflow.
-The `auto/rebase-merge.sh` script is triggered when pull requests targeting the `release` branch are merged and closed,
+The `auto/promote-release.sh` script is triggered when pull requests targeting the `release` branch are merged and closed,
 so all conflicts should be resolved and consolidated by then. This approach has proven to be effective for our workflow.
 
 You can read more about Git rebase options in the official docs: [Git rebase options](https://git-scm.com/docs/git-rebase#_options).
@@ -83,7 +83,7 @@ This script synchronizes the `release` branch with the `main` branch by rebasing
 and force-pushing (overwriting the remote `release` history with the updated history from the `main` branch).
 It ensures that both branches have the same commit history, even if commit hashes differ due to rebasing,
 to avoid potential merge conflicts for future merges.
-This script is triggered automatically by the CI workflow after a successful rebase-merge to the `main` branch.
+This script is triggered automatically by the CI workflow after a successful rebase & merge to the `main` branch.
 
 ### Script Functionality
 
@@ -108,12 +108,12 @@ reducing the risk of merge conflicts and maintaining a clean commit history.
 
 ## Utility Scripts
 
-The `auto/rebase-merge.sh` and `auto/sync-release.sh` scripts source the following utility and helper scripts:
+The `auto/promote-release.sh` and `auto/sync-release.sh` scripts source the following utility and helper scripts:
 
 *   `utils/auto/core-utils.sh`: Provides Git-related functions and other utilities such as logging, debugging, and permission handling.
 *   `utils/auto/common-utils.sh`: Provides additional general-purpose utility functions.
-*   `utils/helpers/format-commits.sh`: Provides functions for formatting commit messages.
-*   `utils/helpers/check-branch-diffs.sh`: Provides functions for checking and reporting differences between branches.
+*   `utils/helpers/release/format-commits.sh`: Provides functions for formatting commit messages.
+*   `utils/helpers/release/check-branch-diffs.sh`: Provides functions for checking and reporting differences between branches.
 
 ## GPG Signing
 
@@ -129,7 +129,7 @@ For detailed usage instructions and information about the local scripts, see the
 ### Conclusion
 
 These automated and local scripts provide a robust and flexible system for managing releases and ensuring code integrity.
-By automating the rebase-merge and synchronization processes, these scripts help streamline the development workflow,
+By automating the rebase & merge and synchronization processes, these scripts help streamline the development workflow,
 minimize the risk of merge conflicts, and maintain a clean and consistent Git history.
 For situations requiring more control or manual intervention, the local scripts offer a flexible and convenient alternative
 for handling complex merges and resolving conflicts.

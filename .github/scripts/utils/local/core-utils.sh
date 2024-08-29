@@ -26,8 +26,8 @@
 #
 # Dependencies:
 #   - local/common-utils.sh
-#   - helpers/format-commits.sh
-#   - helpers/check-branch-diffs.sh
+#   - helpers/release/format-commits.sh
+#   - helpers/release/check-branch-diffs.sh
 #
 # Enable strict mode
 set -euo pipefail
@@ -36,8 +36,8 @@ set -euo pipefail
 source .github/scripts/utils/local/common-utils.sh
 
 # Source the helpers
-source .github/scripts/utils/helpers/format-commits.sh
-source .github/scripts/utils/helpers/check-branch-diffs.sh
+source .github/scripts/utils/helpers/release/format-commits.sh
+source .github/scripts/utils/helpers/release/check-branch-diffs.sh
 
 # Configuration for fetch depth
 # The fetch depth determines how many commits from the tip of the history are fetched.
@@ -72,7 +72,7 @@ setup_git_config() {
 # This function checks if the specified remote repository exists by verifying the presence of remote branches.
 # If the remote repository does not exist, it triggers a failure.
 check_remote_exists() {
-    local remote_name=$1
+    local remote_name="$1"
     if ! git ls-remote --heads "$remote_name" &>/dev/null; then
         handle_failure "Repository \`$remote_name\` not found. Please check the remote URL and your permissions."
     fi
@@ -82,7 +82,7 @@ check_remote_exists() {
 # This function fetches the latest changes from the specified remote repository with the configured fetch depth.
 # If the fetch operation fails, it triggers a failure.
 fetch_remote_branch() {
-    local remote_name=$1
+    local remote_name="$1"
 
     # Check if the remote exists
     check_remote_exists "$remote_name"
@@ -95,8 +95,8 @@ fetch_remote_branch() {
 # This function checks out a local branch based on a remote branch. If the branch does not exist locally,
 # it creates a new one that tracks the remote branch.
 checkout_and_track_branch() {
-    local branch=$1
-    local remote_name=$2
+    local branch="$1"
+    local remote_name="$2"
 
     # Force checkout the branch and ensure it tracks the remote branch
     if ! git checkout --force -B "$branch" "$remote_name/$branch"; then
@@ -108,8 +108,8 @@ checkout_and_track_branch() {
 # This function creates a backup branch from the current branch before starting the merge process.
 # The backup branch is named to indicate that it was created before a local rebase.
 create_backup_branch(){
-    local branch=$1
-    local operation_mode=$2
+    local branch="$1"
+    local operation_mode="$2"
 
     # Create a backup branch with a timestamped name
     backup_branch="backup/$branch-pre-local-rebase-$operation_mode-$(date +%Y%m%d%H%M)"
@@ -125,9 +125,9 @@ create_backup_branch(){
 # This function returns the commit range between the main and release branches
 # as a string that can be used in Git commands.
 get_commit_range() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
 
     # Return the commit range for the given branches
     echo "$remote_name/$main_branch..$remote_name/$release_branch"
@@ -158,13 +158,14 @@ check_commit_history_diff() {
 # This function compares the differences between the release and main branches.
 # It appends the diff output to the provided message, which can help in investigating conflicts or reviewing changes.
 get_branch_diffs() {
-    local branch_release=$1
-    local branch_main=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local branch_release="$1"
+    local branch_main="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Append the diff check output directly to the main message
-    message="$(check_branch_diffs "$remote_name/$branch_release" "$remote_name/$branch_main" "$operation_mode")"
+    message="$(check_branch_diffs "$remote_name/$branch_release" "$remote_name/$branch_main" "$operation_mode" "$diff_excluded_files")"
 
     echo "$message"
 }
@@ -192,8 +193,8 @@ format_commit_messages() {
 # This function determines whether the diff check operation was successful or if a warning was issued.
 # If the diff check is successful, it deletes the backup branch.
 handle_diff_check_results() {
-    local diff_check_output=$1
-    local backup_branch=$2
+    local diff_check_output="$1"
+    local backup_branch="$2"
     local diff_check_status=""
 
     # Determine the success or warning status based on the diff check output

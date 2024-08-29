@@ -1,0 +1,171 @@
+name: 'Android Deploy'
+description: 'Deploy an Android app release using Fastlane and Firebase App Distribution. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+
+inputs:
+  github-repository:
+    description: 'GitHub repository name.'
+    required: true
+  firebase-app-id:
+    description: 'Firebase App ID for deployment.'
+    required: true
+  firebase-testers-group:
+    description: 'Firebase Testers group for deployment.'
+    required: true
+  google-application-credentials:
+    description: 'Google Application Credentials file.'
+    required: true
+  keystore-file-path:
+    description: 'Keystore file path'
+    required: true
+  key-alias:
+    description: 'Alias of the key used for signing the app.'
+    required: true
+  store-password:
+    description: 'Password for the keystore file.'
+    required: true
+  key-password:
+    description: 'Password for the key alias.'
+    required: true
+  slack-deploys-webhook-url:
+    description: 'Slack Webhook URL for sending deploy notifications.'
+    required: true
+  slack-deploys-channel:
+    description: 'Slack channel for sending deploy notifications.'
+    required: true
+  slack-username:
+    description: 'Slack Username for sending deploy notifications.'
+    required: true
+  github-token:
+    description: 'GitHub token with repository permissions.'
+    required: true
+  changelog-file-path:
+    description: 'Path to the CHANGELOG.md file to extract release notes from.'
+    required: true
+  gradle-file-path:
+    description: 'Path to the Gradle file to extract the version name from'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Grants execute permissions to all shell scripts.
+    - name: Grant Execute Permission
+      run: |
+        git config --global core.filemode false
+        chmod +x .github/scripts/utils/helpers/grant-exec-perms.sh
+        .github/scripts/utils/helpers/grant-exec-perms.sh
+      shell: bash
+
+    # Set up Ruby environment
+    - name: Set up Ruby
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '3.3'
+        bundler-cache: true # runs 'bundle install' and caches installed gems automatically
+      # Documentation: Sets up Ruby for managing Ruby gems and Fastlane
+      # See: https://github.com/ruby/setup-ruby
+
+    # Set up Node.js environment
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.15.1'
+      # Documentation: Sets up Node.js for managing Node.js dependencies
+      # See: https://github.com/actions/setup-node
+
+    # Install Firebase CLI using npm
+    - name: Set up Firebase CLI
+      run: npm install -g firebase-tools
+      shell: bash
+      # Documentation: Installs Firebase CLI globally for deployment tasks
+      # See: https://firebase.google.com/docs/cli
+
+    # Extracts the current release version from the app build.gradle.kts
+    - name: Extract version name
+      run: .github/scripts/utils/helpers/deploy/extract-version.sh
+      env:
+        GRADLE_FILE_PATH: ${{ inputs.gradle-file-path }}
+      shell: bash
+
+    # Extracts the last version release notes from the changelog
+    - name: Extract release notes for the last version
+      run: .github/scripts/utils/helpers/deploy/extract-release-notes.sh
+      env:
+        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
+        CHANGELOG_FILE_PATH: ${{ inputs.changelog-file-path }}
+      shell: bash
+
+    # Check the latest release version from Firebase App Distribution using Fastlane
+    # Sets the SHOULD_DEPLOY environment variable to be used by subsequent steps.
+    # Next steps continue if SHOULD_DEPLOY=true, otherwise the workflow ends.
+    - name: Check the latest release version
+      id: fastlane-released-version
+      env:
+        FIREBASE_APP_ID: ${{ inputs.firebase-app-id }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.google-application-credentials }}
+        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
+      run: bundle exec fastlane check_latest_release
+      shell: bash
+
+    # Set up Android SDK
+    - name: Setup Android SDK
+      if: env.SHOULD_DEPLOY == 'true'
+      uses: android-actions/setup-android@v3
+      with:
+        log-accepted-android-sdk-licenses: false
+      # Documentation: Sets up Android SDK for building and testing Android apps
+      # See: https://github.com/android-actions/setup-android
+
+    # Build the app and deploy it to Firebase App Distribution using Fastlane
+    # Sets the APK_PATH environment variable to be used by subsequent steps.
+    - name: Build and Deploy to Firebase App Distribution
+      if: env.SHOULD_DEPLOY == 'true'
+      id: fastlane
+      env:
+        FIREBASE_APP_ID: ${{ inputs.firebase-app-id }}
+        FIREBASE_TESTERS_GROUP: ${{ inputs.firebase-testers-group }}
+        GOOGLE_APPLICATION_CREDENTIALS: ${{ inputs.google-application-credentials }}
+        STORE_FILE: ${{ inputs.keystore-file-path }}
+        KEY_ALIAS: ${{ inputs.key-alias }}
+        STORE_PASSWORD: ${{ inputs.store-password }}
+        KEY_PASSWORD: ${{ inputs.key-password }}
+        SLACK_DEPLOYS_WEBHOOK_URL: ${{ inputs.slack-deploys-webhook-url }}
+        SLACK_DEPLOYS_CHANNEL: ${{ inputs.slack-deploys-channel }}
+        SLACK_USERNAME: ${{ inputs.slack-username }}
+        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
+        RELEASE_NOTES: ${{ env.RELEASE_NOTES }}
+      run: bundle exec fastlane deploy
+      shell: bash
+      # Documentation: Builds the app and deploys it to Firebase App Distribution using Fastlane
+      # See: https://docs.fastlane.tools/
+
+    # Install jq for JSON parsing
+    - name: Install jq Command
+      if: env.SHOULD_DEPLOY == 'true'
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+      shell: bash
+
+    # Get the last release ID we need to upload the APK to GitHub release assets
+    - name: Get Release ID
+      if: env.SHOULD_DEPLOY == 'true'
+      id: get_release_id
+      run: .github/scripts/utils/helpers/deploy/get-release-id.sh
+      shell: bash
+      env:
+        BOT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ inputs.github-repository }}
+        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
+
+    # Upload the deployed APK file to GitHub Release Assets
+    - name: Upload APK
+      if: env.SHOULD_DEPLOY == 'true' && env.RELEASE_ID && env.RELEASE_ID != 'null'
+      run: .github/scripts/utils/helpers/deploy/upload-apk.sh
+      shell: bash
+      env:
+        BOT_GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_REPOSITORY: ${{ inputs.github-repository }}
+        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
+        APK_PATH: ${{ env.APK_PATH }} # Have been set from the fastlane deploy lane
+        RELEASE_ID: ${{ env.RELEASE_ID }}
