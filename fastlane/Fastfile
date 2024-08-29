@@ -1,0 +1,97 @@
+# This file contains the fastlane.tools configuration
+# You can find the documentation at https://docs.fastlane.tools
+#
+# For a list of all available actions, check out
+#
+#     https://docs.fastlane.tools/actions
+#
+# For a list of all available plugins, check out
+#
+#     https://docs.fastlane.tools/plugins/available-plugins
+#
+before_all do
+  update_fastlane
+end
+
+default_platform(:android)
+
+platform :android do
+    desc "Determine if the current version needs to be deployed to Firebase App Distribution."
+    lane :check_latest_release do
+        # Fetch the latest release information from Firebase App Distribution for the specified FIREBASE_APP_ID.
+        latest_release = firebase_app_distribution_get_latest_release(
+            app:  ENV['FIREBASE_APP_ID']
+        )
+
+        # Check if there is a latest release available.
+        if latest_release
+            # Log the version of the latest release found in Firebase App Distribution.
+            UI.message("Latest release version: #{latest_release[:displayVersion]}")
+
+            # Retrieve the current version of the app from the environment variable.
+            current_version = ENV['CURRENT_RELEASE_VERSION']
+
+            # Compare the current version with the latest release version.
+            if current_version == latest_release[:displayVersion]
+                # If the current version is already deployed, skip deployment.
+                UI.message("The version #{current_version} is already deployed. Skipping deployment.")
+                sh("echo SHOULD_DEPLOY=false >> $GITHUB_ENV")
+            else
+                # If the current version is different, proceed with deployment.
+                UI.message("The version #{current_version} is ready to deploy.")
+                sh("echo SHOULD_DEPLOY=true >> $GITHUB_ENV")
+            end
+        else
+            # If no releases were found, log a message and proceed with deployment.
+            UI.message("No releases found for the app in Firebase App Distribution.")
+            sh("echo SHOULD_DEPLOY=true >> $GITHUB_ENV")
+        end
+    end
+
+    desc "Build and deploy a new version to Firebase App Distribution"
+    lane :deploy do
+        version_name = ENV['CURRENT_RELEASE_VERSION']
+        begin
+            gradle(task: "clean assembleRelease")
+
+            # If you need the aab bundle or other variant paths, you'll have to use other variables
+            # check: https://docs.fastlane.tools/actions/build_android_app/#lane-variables
+            apk_path = Actions.lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+
+            # Save the generated apk path to the github env, so we can upload the apk to the github release assets
+            sh("echo APK_PATH=#{apk_path} >> $GITHUB_ENV")
+
+            #Path to the JSON file isn't needed if using GOOGLE_APPLICATION_CREDENTIALS
+            firebase_app_distribution(
+                app: ENV['FIREBASE_APP_ID'],
+                groups: ENV['FIREBASE_TESTERS_GROUP'],
+                release_notes: ENV['RELEASE_NOTES']
+            )
+
+            # Notify Slack about the build status
+            slack(
+                message: "New version #{version_name} has been deployed! 🚀",
+                channel: ENV['SLACK_DEPLOYS_CHANNEL'],
+                username: ENV['SLACK_USERNAME'],
+                success: true,
+                payload: {
+                    "Version" => version_name
+                },
+                slack_url: ENV['SLACK_DEPLOYS_WEBHOOK_URL']
+            )
+        rescue => e
+            slack(
+                message: "Deployment of version #{ version_name } has failed! 😞",
+                channel: ENV['SLACK_DEPLOYS_CHANNEL'],
+                username: ENV['SLACK_USERNAME'],
+                success: false,
+                payload: {
+                  "Version" => version_name,
+                  "Error" => e.message
+                },
+                slack_url: ENV['SLACK_DEPLOYS_WEBHOOK_URL']
+            )
+            raise e
+        end # Close the rescue block
+    end # Close the deploy lane
+end # Close the android platform

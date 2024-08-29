@@ -1,0 +1,17 @@
+name: 'Cleanup Deploy Files'
+description: 'Cleanup restored deploy files. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+
+runs:
+  using: 'composite'
+  steps:
+
+    # Clean up restored deploy files regardless of the process status
+    - name: Clean up
+      run: |
+        if [ -f app/keystore.jks ]; then shred -u app/keystore.jks; fi
+        if [ -f firebase-credentials.json ]; then shred -u firebase-credentials.json; fi
+        if [ -f app/google-services.json ]; then shred -u app/google-services.json; fi
+        echo "deploy files cleanup completed successfully."
+      if: always() # Ensures cleanup runs even if previous steps fail
+      shell: bash
+      # Documentation: Cleans up restored files to maintain security

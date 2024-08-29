@@ -28,8 +28,8 @@
 #
 # Dependencies:
 #   - auto/common-utils.sh
-#   - helpers/format-commits.sh
-#   - helpers/check-branch-diffs.sh
+#   - helpers/release/format-commits.sh
+#   - helpers/release/check-branch-diffs.sh
 #
 # Enable strict mode
 set -euo pipefail
@@ -38,8 +38,8 @@ set -euo pipefail
 source .github/scripts/utils/auto/common-utils.sh
 
 # Source the helpers
-source .github/scripts/utils/helpers/format-commits.sh
-source .github/scripts/utils/helpers/check-branch-diffs.sh
+source .github/scripts/utils/helpers/release/format-commits.sh
+source .github/scripts/utils/helpers/release/check-branch-diffs.sh
 
 # Configuration for fetch depth
 # The fetch depth determines how many commits from the tip of the history are fetched.
@@ -152,9 +152,10 @@ get_branch_diffs() {
     local branch_main="$2"
     local remote_name="$3"
     local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Append the diff check output directly to the main message
-    message="$(check_branch_diffs "$remote_name/$branch_release" "$remote_name/$branch_main" "$operation_mode")"
+    message="$(check_branch_diffs "$remote_name/$branch_release" "$remote_name/$branch_main" "$operation_mode" "$diff_excluded_files")"
 
     echo "$message"
 }

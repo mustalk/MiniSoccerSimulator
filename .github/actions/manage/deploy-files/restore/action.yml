@@ -1,0 +1,40 @@
+name: 'Restore Deploy Files'
+description: 'Restore deploy files needed for the deployment process. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+
+inputs:
+  encoded-google-services:
+    description: 'Base64 encoded google-services.json'
+    required: true
+  encoded-app-keystore:
+    description: 'Base64 encoded keystore.jks'
+    required: true
+  encoded-firebase-credentials:
+    description: 'Base64 encoded firebase-credentials.json'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Restore google-services.json file
+    - name: Restore google-services.json
+      run: |
+        echo "${{ inputs.encoded-google-services }}" | base64 --decode > app/google-services.json
+        echo "google-services restored successfully."
+      shell: bash
+      # Documentation: Restore the google-services.json file needed for the deployment process
+
+    # Restore the keystore file
+    - name: Restore keystore.jks
+      run: |
+        echo "${{ inputs.encoded-app-keystore }}" | base64 --decode > app/keystore.jks
+        echo "app/keystore.jks restored successfully."
+      shell: bash
+      # Documentation: Restore the keystore file needed for signing the app
+
+    # Restore the Google Application Credentials file
+    - name: Restore firebase-credentials.json
+      run: |
+        echo "${{ inputs.encoded-firebase-credentials }}" | base64 --decode > firebase-credentials.json
+        echo "firebase-credentials.json restored successfully."
+      shell: bash
+      # Documentation: Restore Google Application Credentials needed for Firebase deployment

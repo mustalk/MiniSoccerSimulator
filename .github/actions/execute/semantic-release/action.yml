@@ -1,0 +1,135 @@
+name: 'Semantic Release'
+description: 'Automates semantic versioning and release with semantic-release. | Copyright 2024 MusTalK (https://github.com/mustalk)'
+
+inputs:
+  release-branch:
+    description: 'The release branch to rebase.'
+    required: true
+    default: 'release'
+  main-branch:
+    description: 'The main branch to rebase onto.'
+    required: true
+    default: 'main'
+  remote-name:
+    description: 'The remote name to use for fetch/push.'
+    required: true
+    default: 'origin'
+  gpg-key:
+    description: 'The GPG private key for signing commits.'
+    required: true
+  gpg-passphrase:
+    description: 'The passphrase for GPG signing.'
+    required: true
+  github-token:
+    description: 'GitHub Token'
+    required: true
+  slack-releases-webhook:
+    description: 'Slack Webhook URL for sending release notifications.'
+    required: true
+  slack-releases-channel:
+    description: 'Slack channel for sending release notifications.'
+    required: true
+  slack-username:
+    description: 'Slack Username for sending release notifications.'
+    required: true
+  package-name:
+    description: 'Package Name'
+    required: true
+  changelog-file-path:
+    description: 'Path to the CHANGELOG.md file.'
+    required: true
+  gradle-file-path:
+    description: 'Path to the Gradle file.'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    # Initialize default status to skipped, so we can check if the script has been executed successfully or not in the workflow.
+    - name: Initialize default action status
+      run: |
+        echo "SEMANTIC_RELEASE_STATUS=skipped" >>"$GITHUB_ENV"
+        echo "SEMANTIC_RELEASE_MESSAGE='Semantic release step was skipped.'" >>"$GITHUB_ENV"
+      shell: bash
+
+    # Construct ASSETS dynamically (Space-separated list of assets to be commited after the semantic release run)
+    - name: Construct ASSETS variable
+      id: construct-assets
+      run: echo "ASSETS=${{ inputs.changelog-file-path }} ${{ inputs.gradle-file-path }}" >>"$GITHUB_ENV"
+      shell: bash
+      # Documentation: Constructs the ASSETS variable by combining the gradle-file-path and changelog-file-path
+
+    # Set up Node.js environment
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 'lts/*'
+      # Documentation: Sets up Node.js for managing Node.js dependencies
+      # See: https://github.com/actions/setup-node
+
+    # Install project dependencies
+    - name: Install dependencies
+      run: npm ci
+      shell: bash
+      # Documentation: Installs project dependencies defined in the package-lock.json file using npm.
+
+    # Grants execute permissions to all shell scripts.
+    - name: Grant Execute Permission
+      run: |
+        git config --global core.filemode false
+        chmod +x .github/scripts/utils/helpers/grant-exec-perms.sh
+        .github/scripts/utils/helpers/grant-exec-perms.sh
+      shell: bash
+
+    # Runs the GPG setup script with the GPG private key from inputs.
+    - name: Setup GPG
+      run: .github/scripts/gpg-signing/setup.sh
+      shell: bash
+      env:
+        BOT_GPG_PKEY: ${{ inputs.gpg-key }}
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+
+    # Run semantic-release, with gpg signing setup
+    - name: Run semantic-release
+      id: semantic-release
+      run: npx semantic-release
+      shell: bash
+      env:
+        GPG_PASSPHRASE: ${{ inputs.gpg-passphrase }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        SLACK_WEBHOOK: ${{ inputs.slack-releases-webhook }}
+        SLACK_CHANNEL: ${{ inputs.slack-releases-channel }}
+        SLACK_NAME: ${{ inputs.slack-username }}
+        SEMANTIC_RELEASE_PACKAGE: ${{ inputs.package-name }}
+      # Documentation: Runs the semantic-release tool to analyze commits,
+      # generate release notes, update app version, and publish a new release.
+      # See: https://github.com/semantic-release/semantic-release
+
+    # Extracts the release notes for the new version from the changelog.
+    # This step only runs if semantic-release successfully created a new release and the NEXT_RELEASE_VERSION environment
+    # variable is available (set by the update-version.sh script during the semantic-release process).
+    - name: Extract release notes for the new version
+      if: steps.semantic-release.outcome == 'success' && env.NEXT_RELEASE_VERSION
+      run: .github/scripts/utils/helpers/deploy/extract-release-notes.sh
+      env:
+        CURRENT_RELEASE_VERSION: ${{ env.NEXT_RELEASE_VERSION }}
+        CHANGELOG_FILE_PATH: ${{ inputs.changelog-file-path }}
+      shell: bash
+
+    # Commits the version bump and changelog changes to the repository.
+    - name: Commit Version Bump and Changelog
+      if: steps.semantic-release.outcome == 'success' && env.NEXT_RELEASE_VERSION
+      run: .github/scripts/utils/helpers/deploy/commit-version-bump.sh
+      shell: bash
+      env:
+        REMOTE_NAME: ${{ inputs.remote-name }}
+        BRANCH_NAME: ${{ inputs.main-branch }}
+        NEXT_RELEASE_VERSION: ${{ env.NEXT_RELEASE_VERSION }}
+        RELEASE_NOTES: ${{ env.RELEASE_NOTES }}
+        ASSETS: ${{ env.ASSETS }}
+
+    # Runs the GPG cleanup script to remove the GPG agent and key.
+    - name: Cleanup GPG
+      if: always()
+      run: .github/scripts/gpg-signing/cleanup.sh
+      shell: bash

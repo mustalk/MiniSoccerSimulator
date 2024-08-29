@@ -37,6 +37,9 @@ SUCCESS_AUTO_PUSH="false"
 # Set to "true" to enable automatic push after resolving conflicts, "false" to disable.
 CONFLICT_AUTO_PUSH="false"
 
+# Files excluded from the diff checks
+DIFF_EXCLUDE_FILES="CHANGELOG.md|app/build.gradle.kts"
+
 # Variable to store the backup branch name.
 backup_branch=""
 
@@ -44,10 +47,10 @@ backup_branch=""
 # This function checks whether the main branch is up-to-date with the release branch.
 # If there are no new commits to merge, it logs a success message and exits.
 check_commits_up_to_date() {
-    local main_branch=$1
-    local release_branch=$2
-    local remote_name=$3
-    local operation_mode=$4
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
+    local operation_mode="$4"
     local ahead_commits=""
     local commit_range=""
 
@@ -67,11 +70,12 @@ check_commits_up_to_date() {
 # This function manages post-merge operations, including restoring permissions,
 # formatting commit messages, and running a diff check between branches.
 handle_successful_merge() {
-    local message=$1
-    local release_branch=$2
-    local main_branch=$3
-    local remote_name=$4
-    local operation_mode=$5
+    local message="$1"
+    local release_branch="$2"
+    local main_branch="$3"
+    local remote_name="$4"
+    local operation_mode="$5"
+    local diff_excluded_files="$6"
 
     # Restore file permissions if filemode is enabled.
     if [[ "$(git config core.filemode)" == "true" ]]; then
@@ -90,7 +94,7 @@ handle_successful_merge() {
 
     # Check for unmerged commits and/or file content differences on the main branch,
     # and append the output to the status message to make investigating conflicts easier.
-    diff_check_output="$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode")"
+    diff_check_output="$(get_branch_diffs "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files")"
 
     # Append the diff check output to the message.
     message="$diff_check_output"
@@ -126,8 +130,9 @@ perform_post_rebase_merge() {
     local main_branch="$2"
     local remote_name="$3"
     local operation_mode="$4"
-    local auto_push="$5"
-    local conflict="$6"
+    local diff_excluded_files="$5"
+    local auto_push="$6"
+    local conflict="$7"
     local diff_check_output=""
 
     # Checkout the main branch.
@@ -162,7 +167,7 @@ perform_post_rebase_merge() {
         fi
 
         # Handle the successful merge with appropriate status messages.
-        handle_successful_merge "$message" "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+        handle_successful_merge "$message" "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files"
     else
         # Handle the failure of the fast-forward merge.
         if [[ "$conflict" == "true" ]]; then
@@ -185,6 +190,7 @@ start_rebase_merge_process() {
     local main_branch="$2"
     local remote_name="$3"
     local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Rebase the release branch onto the main branch interactively.
     if git rebase -i "$main_branch"; then
@@ -194,7 +200,7 @@ start_rebase_merge_process() {
         backup_branch=$(create_backup_branch "$main_branch" "$operation_mode")
 
         # Attempt a fast-forward merge.
-        perform_post_rebase_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$SUCCESS_AUTO_PUSH" "false"
+        perform_post_rebase_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files" "$SUCCESS_AUTO_PUSH" "false"
     else
         handle_warning "Resolve conflicts manually and continue the rebase."
 
@@ -205,7 +211,7 @@ start_rebase_merge_process() {
         done
 
         # Attempt a fast-forward merge again after conflicts resolution.
-        perform_post_rebase_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$CONFLICT_AUTO_PUSH" "true"
+        perform_post_rebase_merge "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files" "$CONFLICT_AUTO_PUSH" "true"
     fi
 }
 
@@ -216,6 +222,7 @@ main() {
     local main_branch="$2"
     local release_branch="$3"
     local operation_mode="$4"
+    local diff_excluded_files="$5"
 
     # Ensure that the script is running in the root directory of the repository.
     ensure_repo_root
@@ -249,8 +256,8 @@ main() {
     checkout_and_track_branch "$release_branch" "$remote_name"
 
     # Start the rebase and merge process.
-    start_rebase_merge_process "$release_branch" "$main_branch" "$remote_name" "$operation_mode"
+    start_rebase_merge_process "$release_branch" "$main_branch" "$remote_name" "$operation_mode" "$diff_excluded_files"
 }
 
 # Execute the main function with the provided remote name, main branch, release branch, and operation_mode.
-main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE"
+main "$REMOTE_NAME" "$MAIN_BRANCH" "$RELEASE_BRANCH" "$SCRIPT_OPERATION_MODE" "$DIFF_EXCLUDE_FILES"

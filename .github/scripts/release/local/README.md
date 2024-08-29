@@ -2,7 +2,7 @@
 
 This directory contains scripts that can be used locally by developers to manage the release process.
 
-## `local/rebase-merge.sh`
+## `local/promote-release.sh`
 
 This script provides a manual way to rebase and merge the `release` branch into the `main` branch,
 which is particularly useful for handling merge conflicts or performing interactive rebases.
@@ -10,7 +10,7 @@ which is particularly useful for handling merge conflicts or performing interact
 **What the Script Does:**
 
 *   Fetches the latest changes from the `origin` remote.
-*   Checks if all commits from `release` are already in `main`. If they are, the script stops here, skipping the rebase-merge.
+*   Checks if all commits from `release` are already in `main`. If they are, the script stops.
 *   Stashes any uncommitted changes.
 *   Checks out the `main` branch and updates it.
 *   Checks out the `release` branch and updates it.
@@ -33,8 +33,8 @@ which is particularly useful for handling merge conflicts or performing interact
 **Usage:**
 
 1.  Open a terminal in the root directory of your Git repository.
-2.  Grant execute permission to the script: `chmod +x .github/scripts/release/local/rebase-merge.sh`
-3.  Run the script: `./.github/scripts/release/local/rebase-merge.sh`
+2.  Grant execute permission to the script: `chmod +x .github/scripts/release/local/promote-release.sh`
+3.  Run the script: `./.github/scripts/release/local/promote-release.sh`
 
 ### Interactive Rebase Cheat Sheet
 
@@ -89,12 +89,12 @@ reducing the risk of merge conflicts and ensuring a smooth workflow.
 
 ## Utility Scripts
 
-The `local/rebase-merge.sh` and `local/sync-release.sh` scripts source the following utility and helper scripts:
+The `local/promote-release.sh` and `local/sync-release.sh` scripts source the following utility and helper scripts:
 
 *   `utils/local/core-utils.sh`: Provides Git-related functions and other utilities such as logging, debugging, and permission handling.
 *   `utils/local/common-utils.sh`: Provides additional general-purpose utility functions.
-*   `utils/helpers/format-commits.sh`: Provides functions for formatting commit messages.
-*   `utils/helpers/check-branch-diffs.sh`: Provides functions for checking and reporting differences between branches.
+*   `utils/helpers/release/format-commits.sh`: Provides functions for formatting commit messages.
+*   `utils/helpers/release/check-branch-diffs.sh`: Provides functions for checking and reporting differences between branches.
 
 ## GPG Signing
 
@@ -110,7 +110,7 @@ Make sure you have GPG configured correctly before enabling signing.
 
 ## Automated Scripts
 
-* For automated rebasing and merging in this project's CI environment (GitHub Actions), the `auto/rebase-merge.sh` script is used.
+* For automated rebasing and merging in this project's CI environment (GitHub Actions), the `auto/promote-release.sh` script is used.
   This script performs a non-interactive rebase and merge with a specific conflict resolution strategy.
 
 * For automated synchronization of the `release` branch with the `main` branch after a successful merge to `release`, the `auto/sync-release.sh`

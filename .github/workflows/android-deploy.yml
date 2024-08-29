@@ -1,0 +1,180 @@
+# Copyright 2024 MusTalK (https://github.com/mustalk)
+#
+# Android Deploy Workflow
+#
+# This workflow automates the build, versioning, release, and deployment process for an Android app.
+#
+# Workflow Trigger:
+#   - Push to the 'main' branch (excluding Markdown files).
+#
+# Environment Variables:
+#   - ACTIONS_BOT_USERNAME: Username for Slack notifications.
+#   - ACTIONS_SLACK_GITHUB_CHANNEL: Slack channel for notifications.
+#   - RELEASE_BRANCH: Name of the release branch.
+#   - MAIN_BRANCH: Name of the main branch.
+#   - REMOTE_NAME: Name of the remote repository.
+#   - CHANGELOG_FILE: Path to the changelog file.
+#   - GRADLE_FILE: Path to the Gradle file.
+#
+# Secrets:
+#   - ACTIONS_BOT_GITHUB_TOKEN: GitHub token for actions.
+#   - BOT_GPG_PKEY: GPG private key for signing commits.
+#   - BOT_GPG_PASSPHRASE: Passphrase for the GPG key.
+#   - GRADLE_ENCRYPTION_KEY: Encryption key for Gradle cache.
+#   - APP_GOOGLE_SERVICES_JSON_B64: Base64-encoded Google Services JSON file.
+#   - GOOGLE_APPLICATION_CREDENTIALS_B64: Base64-encoded Firebase credentials file.
+#   - FIREBASE_APP_ID: Firebase App ID.
+#   - ACTIONS_FIREBASE_TESTERS_GROUP: Firebase Testers group to deploy the app to.
+#   - APP_KEYSTORE_B64: Base64-encoded keystore file.
+#   - KEY_ALIAS: Key alias for app signing.
+#   - KEY_STORE_PASSWORD: Password for the keystore.
+#   - KEY_PASSWORD: Password for the key alias.
+#   - SLACK_RELEASES_WEBHOOK_URL: Slack webhook URL for release notifications.
+#   - SLACK_DEPLOYS_WEBHOOK_URL: Slack webhook URL for deploy notifications.
+#
+name: Android Deploy
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+env:
+  RELEASE_BRANCH: 'release'
+  MAIN_BRANCH: 'main'
+  REMOTE_NAME: 'origin'
+  CHANGELOG_FILE: 'CHANGELOG.md' # The changelog file updated by semantic-release, to be excluded from diff checks to prevent false positive warnings.
+  GRADLE_FILE: 'app/build.gradle.kts' # The Gradle build file used for version bumps, also to be excluded from diff checks.
+
+jobs:
+  version-bump:
+    if: "!startsWith(github.event.head_commit.message, 'chore(release): promote release v')"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+        # Documentation: Checks out the code for the workflow to execute
+        # See: https://docs.github.com/en/actions/reference/actions#checkout
+
+      # Run semantic-release
+      - name: Run semantic-release
+        id: semantic-release
+        uses: ./.github/actions/execute/semantic-release
+        with:
+          release-branch: ${{ env.RELEASE_BRANCH }}
+          main-branch: ${{ env.MAIN_BRANCH }}
+          remote-name: ${{ env.REMOTE_NAME }}
+          gpg-key: ${{ secrets.BOT_GPG_PKEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          github-token: ${{ secrets.ACTIONS_BOT_GITHUB_TOKEN }}
+          slack-releases-webhook: ${{ secrets.SLACK_RELEASES_WEBHOOK_URL }}
+          slack-releases-channel: ${{ vars.ACTIONS_SLACK_RELEASES_CHANNEL }}
+          slack-username: ${{ vars.ACTIONS_BOT_USERNAME }}
+          package-name: ${{ github.event.repository.name }}
+          changelog-file-path: ${{ env.CHANGELOG_FILE }}
+          gradle-file-path: ${{ env.GRADLE_FILE }}
+
+      # Synchronize the release branch with main after the promote-release and semantic-release process.
+      # This ensures that the release branch reflects the latest state of main, with the version bump,
+      # changelog changes, and commit hashes change after the promote-release process.
+      # With this we avoid potential merge conflicts in the future.
+      - name: Synchronize Release
+        id: sync-release
+        if: success()
+        uses: ./.github/actions/execute/sync-release
+        with:
+          release-branch: ${{ env.RELEASE_BRANCH }}
+          main-branch: ${{ env.MAIN_BRANCH }}
+          remote-name: ${{ env.REMOTE_NAME }}
+          gpg-key: ${{ secrets.BOT_GPG_PKEY }}
+          gpg-passphrase: ${{ secrets.BOT_GPG_PASSPHRASE }}
+          changelog-file-path: ${{ env.CHANGELOG_FILE }}
+          gradle-file-path: ${{ env.GRADLE_FILE }}
+
+      # Send Slack notification for Synchronize Release
+      - name: Send Slack notification (Synchronize Release)
+        if: always()
+        uses: rtCamp/action-slack-notify@v2
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_GITHUB_WEBHOOK_URL }}
+          SLACK_CHANNEL: ${{ vars.ACTIONS_SLACK_GITHUB_CHANNEL }}
+          SLACK_USERNAME: ${{ vars.ACTIONS_BOT_USERNAME }}
+          SLACK_TITLE: ${{ env.SYNC_RELEASE_STATUS == 'success' && 'Sync Release :white_check_mark:' || env.SYNC_RELEASE_STATUS == 'warning' && 'Sync Release :warning:' || 'Sync Release :x:' }}
+          SLACK_COLOR: ${{ env.SYNC_RELEASE_STATUS == 'success' && 'good' || env.SYNC_RELEASE_STATUS == 'warning' && '#FAE52F' || env.SYNC_RELEASE_STATUS == 'skipped' && '#6D6D6D' || 'danger' }}
+          SLACK_MESSAGE: ${{ env.SYNC_RELEASE_STATUS == 'skipped' && 'Sync Release Skipped due to an unexpected error' || env.SYNC_RELEASE_MESSAGE }}
+          SLACKIFY_MARKDOWN: true
+          ENABLE_ESCAPES: true
+          SLACK_FOOTER: ''
+
+  deploy:
+    needs: version-bump
+    if: "!startsWith(github.event.head_commit.message, 'chore(release): promote release v')"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      # Force fetch repo after semantic release changes to avoid checkout cache issues
+      - name: Force fresh checkout after release
+        if: success()
+        run: |
+          git fetch --all
+          git reset --hard ${{ env.REMOTE_NAME }}/${{ env.MAIN_BRANCH }}
+
+      # Sets up the required JDK and Gradle environment for the project.
+      - name: Setup JDK and Gradle
+        if: success()
+        uses: ./.github/actions/setup/gradle-java
+        with:
+          gradle-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
+
+      # Restore files needed for the deployment process.
+      - name: Restore deploy files
+        if: success()
+        uses: ./.github/actions/manage/deploy-files/restore
+        with:
+          encoded-google-services: ${{ secrets.APP_GOOGLE_SERVICES_JSON_B64 }}
+          encoded-app-keystore: ${{ secrets.APP_KEYSTORE_B64 }}
+          encoded-firebase-credentials: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_B64 }}
+
+      # Run android deploy
+      - name: Deploy Android App
+        if: success()
+        uses: ./.github/actions/execute/android-deploy
+        with:
+          github-token: ${{ secrets.ACTIONS_BOT_GITHUB_TOKEN }}
+          github-repository: ${{ github.repository }}
+          firebase-app-id: ${{ secrets.FIREBASE_APP_ID }}
+          firebase-testers-group: ${{ vars.ACTIONS_FIREBASE_TESTERS_GROUP }}
+          google-application-credentials: firebase-credentials.json
+          keystore-file-path: keystore.jks
+          key-alias: ${{ secrets.KEY_ALIAS }}
+          store-password: ${{ secrets.KEY_STORE_PASSWORD }}
+          key-password: ${{ secrets.KEY_PASSWORD }}
+          slack-deploys-webhook-url: ${{ secrets.SLACK_DEPLOYS_WEBHOOK_URL }}
+          slack-deploys-channel: ${{ vars.ACTIONS_SLACK_DEPLOYS_CHANNEL }}
+          slack-username: ${{ vars.ACTIONS_BOT_USERNAME }}
+          changelog-file-path: ${{ env.CHANGELOG_FILE }} # The changelog file to extract release notes from.
+          gradle-file-path: ${{ env.GRADLE_FILE }}       # The Gradle build file to extract app version from.
+
+      # Clean up restored files regardless of the build status
+      - name: Clean up deploy files
+        uses: ./.github/actions/manage/deploy-files/cleanup
+        if: always() # Ensures cleanup runs even if previous steps fail
+        # Documentation: Cleans up restored files to maintain security

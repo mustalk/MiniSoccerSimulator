@@ -41,10 +41,15 @@ check_required_vars() {
     # Check if each required variable is set
     for var in "${vars[@]}"; do
         if [ -z "${!var}" ]; then
-            echo "Environment variable $var is not set." >&2
-            exit 1
+            handle_failure "Environment variable $var is not set."
         fi
     done
+}
+
+# Function to handle failures
+handle_failure() {
+    echo "ERROR: $1" >&2
+    exit 1
 }
 
 # Function to sanitize log messages by removing leading colons and replacing newlines with '\n'
@@ -146,11 +151,15 @@ check_unmerged_commits() {
 }
 
 # Function to check for differences in file contents
-# This function compares file contents between the release and main branches using git diff-tree.
+# This function compares file contents between the release and main branches using git diff-tree,
+# excluding specified files from the comparison.
 check_diff_tree() {
     local main_branch="$1"
     local release_branch="$2"
-    git diff-tree -r --name-status "$main_branch" "$release_branch"
+    local diff_excluded_files="$3"
+
+    # Execute git diff-tree with the excluded files patterns
+    git diff-tree -r --name-status "$main_branch" "$release_branch" | grep -Ev "$diff_excluded_files"
 }
 
 # Function to process the commit differences and handle them accordingly
@@ -216,6 +225,7 @@ check_branch_diffs() {
     local release_branch="$1"
     local main_branch="$2"
     local operation_mode="$3"
+    local diff_excluded_files="$4"
 
     # Initialize variables to store unmerged commits and file differences
     local unmerged_commits=""
@@ -228,7 +238,7 @@ check_branch_diffs() {
     unmerged_commits=$(check_unmerged_commits "$main_branch" "$release_branch")
 
     # Retrieve the file content differences between the release and main branches
-    diff_tree=$(check_diff_tree "$main_branch" "$release_branch")
+    diff_tree=$(check_diff_tree "$main_branch" "$release_branch" "$diff_excluded_files")
 
     # Process the commits and file differences to determine the appropriate message and status
     process_commits_and_diffs "$unmerged_commits" "$diff_tree" "$main_branch" "$release_branch" "$operation_mode"

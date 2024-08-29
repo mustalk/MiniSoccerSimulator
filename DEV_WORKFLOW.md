@@ -29,9 +29,10 @@ We follow these conventions for naming branches:
 
 We use [Conventional Commits](https://www.conventionalcommits.org/) for writing consistent and informative commit messages. This convention helps to:
 
-- **Automate Changelog generation:** The `android-release.yml` workflow uses [semantic-release](https://github.com/semantic-release/semantic-release)
-  to automatically generate release notes and update the `CHANGELOG.md` based on commit messages that follow the Conventional Commits specification.
-- **Enforce semantic versioning:** Semantic-release uses the commit message format to determine the appropriate version bump (major, minor, or patch)
+- **Automate Changelog generation:** The `android-deploy.yml` workflow uses [semantic-release](https://github.com/semantic-release/semantic-release)
+  through a composite action to automatically generate release notes, bumps the app version, and update the `CHANGELOG.md` based on commit messages
+  that follow the Conventional Commits specification.
+- **Enforce semantic versioning:** `semantic-release` uses the commit message format to determine the appropriate version bump (major, minor, or patch)
   according to [Semantic Versioning](https://semver.org/) principles.
 - **Improve code readability and maintainability:** Consistent commit messages make it easier to understand the history of changes and the reasoning
   behind them.
@@ -70,47 +71,38 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
 ## Workflow
 
 1. **Development:**
-    - Create a new branch from `main` using the appropriate naming convention.
+    - Create a new branch from the `main` branch using the appropriate naming convention (e.g., `feature/new-feature`, `bugfix/bug-fix`).
     - Develop the feature, bug fix, or other change on your branch.
     - Commit changes with descriptive messages following the Conventional Commits format.
-    - Push your feature branch to the remote repository.
+    - Push your branch to the remote repository.
 
 2. **Integration:**
-    - Create a pull request (PR) to merge your branch into `release`.
+    - Create a pull request (PR) to merge your branch into the `release` branch.
     - Ensure all CI checks pass and the code is reviewed.
-    - Merge the PR into `release`.
+    - Merge the PR into the `release` branch.
 
-3. **Automated Rebase and Merge:**
-    - Upon successful merge of a pull request into the `release` branch, an automated workflow attempts to rebase and merge `release` into `main`.
+3. **Automated promotion to main:**
+    - The `promote-release.yml` workflow is automatically triggered on every PR merge to the `release` branch.
+    - This workflow attempts to rebase and merge the `release` branch into the `main` branch.
 
-4. **Release Preparation:**
-    - The `android-release.yml` workflow runs automatically on every push or (PR) merge to `release`.
-    - This workflow uses `semantic-release` to:
-        - Analyze commit messages and determine the next version number based on Conventional Commits and Semantic Versioning.
-        - Generate release notes and updates the changelog file.
-        - Update the app version in `app/build.gradle.kts`.
-        - Create a Git tag for the release.
-        - Create a new GitHub release.
-        - Notify about the release on Slack.
-
-5. **Deployment:**
-    - Once the release is ready, create a PR to merge `release` into `main`.
-    - After the PR is merged, the `android-deploy.yml` workflow runs automatically.
-    - This workflow:
-        - Builds the app.
-        - Deploys the app to Firebase App Distribution (and easily to Google Play when we're ready to publish).
-        - Uploads the APK to the GitHub release assets.
+4. **Deployment:**
+    - The `android-deploy.yml` workflow is automatically triggered on every push to the `main` branch (Triggered by the `promote-release` workflow).
+    - This workflow performs the following tasks:
+        - Runs `semantic-release` to analyze commits, determine the next version, generate release notes, bump app version, and create a GitHub release.
+        - It synchronizes the `release` branch with `main` to incorporate the changes made by `semantic-release` to prevent future merge conflicts.
+        - Deploys the app to Firebase App Distribution (and easily to Google Play Store when we're ready to publish).
+        - Uploads the APK as a release asset on GitHub.
 
 ## Handling Merge Conflicts
 
 - **Automated Workflow:** The automated rebase and merge process is designed to handle straightforward merges efficiently. It will only perform
   the merge if no conflicts are detected.
-    - Refer to the [auto/rebase-merge.sh documentation](.github/scripts/release/auto/README.md#autorebase-mergesh) for details about this script and its implications.
+    - Refer to the [auto/promote-release.sh documentation](.github/scripts/release/auto/README.md#autopromote-releasesh) for details about this script and its implications.
 
 
-- **Manual Script:** For complex merge scenarios or when conflicts arise, I created a dedicated script (`local/rebase-merge.sh`) to handle
+- **Manual Script:** For complex merge scenarios or when conflicts arise, I created a dedicated script (`local/promote-release.sh`) to handle
   merge conflicts and perform interactive rebases. This script provides a convenient way to resolve conflicts manually and ensure a clean merge.
-    - Refer to the [local/rebase-merge.sh documentation](.github/scripts/release/local/README.md#localrebase-mergesh) for detailed usage instructions and information.
+    - Refer to the [local/promote-release.sh documentation](.github/scripts/release/local/README.md#localpromote-releasesh) for detailed usage instructions and information.
 
 
 - **Local Synchronization Script:** If the automated rebase and merge process fails for any reason, you can use the `local/sync-release.sh` script to
@@ -132,29 +124,24 @@ we use an automated process to synchronize it with the `main` branch after each 
 
 **Automated Synchronization:**
 
-The `promote-release` composite GitHub Action automatically synchronizes the `release` branch with `main` after a successful release.
-This involves rebasing the `release` branch onto `main` and force-pushing the changes. This process is necessary because
-the commit hashes on `main` change after the `auto/rebase-merge` operation, even though the content is identical.
-By synchronizing the branches, we avoid potential merge conflicts in the future and ensure that `release` always reflects the latest state of `main`.
+The `android-deploy.yml` workflow automatically synchronizes the `release` branch with `main` after the `semantic-release` process completes successfully.
+This involves rebasing the `release` branch onto `main` and force-pushing the changes.
+This synchronization is crucial to our branching strategy and workflow for two reasons:
 
-**Benefits:**
+1.  The `auto/promote-release.sh` script, while ensuring identical content, alters commit hashes on `main`, potentially leading to future merge conflicts.
+2.  The `semantic-release` process modifies the commit history on `main` by bumping the version number and updating the changelog,
+    which can also cause merge conflicts if `release` is not updated.
 
-* **Reduced merge conflicts:** Minimizes the risk of merge conflicts when merging future changes into `release`.
-* **Up-to-date release branch:** Guarantees that `release` always contains the latest stable code from `main`.
-* **Clean history:** Maintains a linear and easy-to-follow commit history on both our `main` and `release` branch.
-* **Automated workflow:** Eliminates the need for manual synchronization and ensures consistency.
-
-This automated synchronization process is a crucial part of our branching strategy and workflow,
-ensuring a smooth and efficient workflow for managing releases and integrating new features.
+By synchronizing the branches, we prevent potential merge conflicts and ensure that `release` always reflects the latest state of `main`,
+including versioning and changelog information. This ensures a smooth and efficient workflow for managing releases and integrating new features.
 
 ## GitHub Actions Workflows
 
 We use GitHub Actions for continuous integration and deployment. The following workflows are defined:
 
 - **`android-test.yml`:** Runs tests and code analysis on every push to development branches and on PRs to `main` and `release`.
-- **`android-release.yml`:** Prepares the release by generating release notes, updating the app version, creating a Git tag, a GitHub release, and
-  notifying on Slack. Runs on every push to `release`.
-- **`android-deploy.yml`:** Deploys the app to our chosen deployment platform and uploads the APK to GitHub releases. Runs on merged PRs to `main`.
+- **`promote-release.yml`:** Merges the release branch into the main branch (after PR merge into release).
+- **`android-deploy.yml`:** Runs semantic-release and deploys the app to our chosen deployment platform (on push to main).
 
 ## Code Style and Conventions
 

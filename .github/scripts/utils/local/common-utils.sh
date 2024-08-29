@@ -159,7 +159,7 @@ setup_traps() {
 # This function stashes uncommitted changes to ensure they are not lost during the rebase process.
 # The stash is only created if there are uncommitted changes.
 stash_changes() {
-    local operation_mode=$1
+    local operation_mode="$1"
     STASH_NAME="auto-release-$operation_mode-stash-$(date +%s)"
     if ! git diff-index --quiet HEAD --; then
         git stash push -u -m "$STASH_NAME"
@@ -188,7 +188,7 @@ save_starting_point_branch() {
     handle_info "Saved starting point branch name: $starting_branch"
 }
 
-# Function to restore the starting point branch after rebase-merge success
+# Function to restore the starting point branch after promote-release success
 # This function switches back to the branch that was active when the script started.
 restore_starting_point_branch() {
     git checkout "$starting_branch"
