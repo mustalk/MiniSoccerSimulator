@@ -214,7 +214,6 @@ check_commit_message_exists() {
     fi
 }
 
-
 # Function to check if the release branch has multiple commits not in the main branch
 # This function counts the number of commits in the release branch that are not present in the main branch.
 # It returns 0 (true) if there are multiple commits, and 1 (false) if there is one or fewer commits.
@@ -297,7 +296,6 @@ gather_commit_messages() {
     done
 }
 
-
 # Ensures deleted and renamed files are handled correctly during merges.
 # In some cases, Git merge may not accurately reflect renames with low similarity or when both
 # a file's name and contents have changed. Git might handle these scenarios as a deletion of
@@ -344,12 +342,38 @@ handle_deleted_and_renamed_files() {
     fi
 }
 
+# Function to extract author and date information from a specific commit hash.
+# This function is useful for preserving the original author and date when creating a new commit.
+# The extracted information is returned in a format that can be passed as options to the git commit command.
+extract_author_and_date_info() {
+    local last_commit_hash="$1"
+    local author_info
+    local committer_date
+    local author_date_options=""
+
+    # Extract author information in the format: "Author Name <author@example.com>"
+    author_info=$(git log -1 --pretty=format:'%an <%ae>' "$last_commit_hash")
+
+    # Extract author date (format respects --date= option)
+    committer_date=$(git log -1 --pretty=format:'%ad' "$last_commit_hash")
+
+    # Prepare author and date options for the git commit command only if they are not empty
+    if [[ -n "$author_info" && -n "$committer_date" ]]; then
+        author_date_options="--author=\"$author_info\" --date=\"$committer_date\""
+    fi
+
+    # Return the constructed author and date options (empty if not set)
+    echo "$author_date_options"
+}
+
 # Function to commit changes using a temporary file for the commit message
 # Creates a temporary file to store the commit message, ensuring that multiline or complex formatting is preserved exactly as intended.
 # This is particularly useful for detailed or formatted commit messages that need to be maintained as is.
 # The temporary file is deleted after committing to keep the working environment clean.
+# Includes author and date options in the commit command if provided.
 commit_with_temp_file() {
     local commit_message="$1"
+    local author_date_options="${2:-""}"
     local temp_commit_file
 
     # Create a temporary file
@@ -358,8 +382,8 @@ commit_with_temp_file() {
     # Write the commit message to the temporary file
     echo -e "$commit_message" >"$temp_commit_file"
 
-    # Run the git commit command using the temporary file
-    run_cmd git commit --file="$temp_commit_file"
+    # Run the git commit command using the temporary file and optional author/date options
+    run_cmd git commit --file="$temp_commit_file" "$author_date_options"
 
     # Clean up the temporary file
     rm -f "$temp_commit_file"

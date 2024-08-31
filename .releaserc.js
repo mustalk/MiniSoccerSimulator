@@ -11,13 +11,16 @@ module.exports = {
                     { "breaking": true, "release": "major" },
                     { "type": "feat", "release": "minor" },
                     { "type": "fix", "release": "patch" },
-                    { "type": "style", "release": "patch" },
                     { "type": "refactor", "release": "patch" },
                     { "type": "perf", "release": "patch" },
                     { "type": "build", "release": "patch" },
-                    { "type": "ci", "release": "patch" },
                     { "type": "chore", "release": "patch" },
-                    { "type": "revert", "release": "patch" }
+                    { "type": "revert", "release": "patch" },
+                    { "type": "chore", "scope": "release", "release": false },
+                    { "type": "style", "release": false },
+                    { "type": "ci", "release": false },
+                    { "type": "test", "release": false },
+                    { "type": "docs", "release": false }
                 ]
             }
         ],
@@ -33,13 +36,67 @@ module.exports = {
                     { "type": "refactor", "release": "patch" },
                     { "type": "perf", "release": "patch" },
                     { "type": "build", "release": "patch" },
-                    { "type": "ci", "release": "patch" },
                     { "type": "chore", "release": "patch" },
-                    { "type": "revert", "release": "patch" }
-                ]
+                    { "type": "revert", "release": "patch" },
+                    { "type": "chore", "scope": "release", "release": false },
+                    { "type": "style", "release": false },
+                    { "type": "ci", "release": false },
+                    { "type": "test", "release": false },
+                    { "type": "docs", "release": false }
+                ],
+                "presetConfig": {
+                    "types": [
+                        {"type": "feat", "section": "Features"},
+                        {"type": "fix", "section": "Bug Fixes"},
+                        {"type": "perf", "section": "Performance Improvements"},
+                        {"type": "revert", "section": "Reverts"},
+                        {"type": "test", "section": "Tests", "hidden": true},
+                        {"type": "build", "section": "Build System", "hidden": true},
+                        {"type": "docs", "section": "Documentation", "hidden": true},
+                        {"type": "style", "section": "Code Styles", "hidden": true},
+                        {"type": "chore", "section": "Miscellaneous Chores", "hidden": true},
+                        {"type": "refactor", "section": "Code Refactoring", "hidden": false},
+                        {"type": "ci", "section": "Continuous Integration", "hidden": true}
+                    ]
+                }
             }
         ],
-        "@semantic-release/changelog",
+        [
+            "@semantic-release/changelog",
+            {
+                "preset": "conventionalcommits",
+                "releaseRules": [
+                    { "breaking": true, "release": "major" },
+                    { "type": "feat", "release": "minor" },
+                    { "type": "fix", "release": "patch" },
+                    { "type": "refactor", "release": "patch" },
+                    { "type": "perf", "release": "patch" },
+                    { "type": "build", "release": "patch" },
+                    { "type": "chore", "release": "patch" },
+                    { "type": "revert", "release": "patch" },
+                    { "type": "chore", "scope": "release", "release": false },
+                    { "type": "ci", "release": false },
+                    { "type": "style", "release": false },
+                    { "type": "test", "release": false },
+                    { "type": "docs", "release": false }
+                ],
+                "presetConfig": {
+                    "types": [
+                        {"type": "feat", "section": "Features"},
+                        {"type": "fix", "section": "Bug Fixes"},
+                        {"type": "perf", "section": "Performance Improvements"},
+                        {"type": "revert", "section": "Reverts"},
+                        {"type": "test", "section": "Tests", "hidden": true},
+                        {"type": "build", "section": "Build System", "hidden": true},
+                        {"type": "docs", "section": "Documentation", "hidden": true},
+                        {"type": "style", "section": "Code Styles", "hidden": true},
+                        {"type": "chore", "section": "Miscellaneous Chores", "hidden": true},
+                        {"type": "refactor", "section": "Code Refactoring", "hidden": false},
+                        {"type": "ci", "section": "Continuous Integration", "hidden": true}
+                    ]
+                }
+            }
+        ],
         [
             "@semantic-release/exec",
             {

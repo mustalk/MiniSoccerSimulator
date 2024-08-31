@@ -134,7 +134,7 @@ main() {
     local branch_name="$2"
     local next_release_version="$3"
     local assets_string="$4"
-    local release_notes=${5:-""}
+    local release_notes="${5:-""}"
 
     # Convert space-separated string to array
     IFS=' ' read -r -a assets <<<"$assets_string"

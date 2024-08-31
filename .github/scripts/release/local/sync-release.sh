@@ -74,20 +74,24 @@ check_commits_up_to_date() {
 # This function resets the main branch to match the state of the release branch.
 # If auto-push is enabled, the changes will be force-pushed to the remote repository.
 reset_main_to_release() {
-    local auto_push="$1"
-    git checkout "$MAIN_BRANCH"
-    git reset --hard "$RELEASE_BRANCH"
+    local main_branch="$1"
+    local release_branch="$2"
+    local remote_name="$3"
+    local auto_push="$4"
+
+    git checkout "$main_branch"
+    git reset --hard "$release_branch"
     if [[ "$auto_push" == "true" ]]; then
-        git push $REMOTE_NAME $MAIN_BRANCH --force-with-lease
-        git checkout "$RELEASE_BRANCH"
-        handle_info "\`$MAIN_BRANCH\` branch has been reset to match \`$RELEASE_BRANCH\` state."
+        git push "$remote_name" "$main_branch" --force-with-lease
+        git checkout "$release_branch"
+        handle_info "\`$main_branch\` branch has been reset to match \`$release_branch\` state."
     else
-        handle_info "\`$MAIN_BRANCH\` branch has been reset to match \`$RELEASE_BRANCH\` state.\n"
+        handle_info "\`$main_branch\` branch has been reset to match \`$release_branch\` state.\n"
         read -p "Force push to remote? (y/N) " -n 1 -r
         echo
         if [[ $REPLY =~ ^[Yy]$ ]]; then
-            git push $REMOTE_NAME $MAIN_BRANCH --force-with-lease
-            git checkout "$RELEASE_BRANCH"
+            git push "$remote_name" "$main_branch" --force-with-lease
+            git checkout "$release_branch"
         else
             handle_failure "Force push aborted." "true"
         fi
@@ -101,7 +105,8 @@ resolve_conflict_options() {
     local diff_message="$1"
     local main_branch="$2"
     local release_branch="$3"
-    local conflict_auto_push="$4"
+    local remote_name="$4"
+    local conflict_auto_push="$5"
 
     echo -e "$diff_message"
     echo -e "\nHow would you like to resolve this:"
@@ -120,7 +125,7 @@ resolve_conflict_options() {
             read -p "Are you sure you want to reset main? (y/N) " -n 1 -r
             echo
             if [[ $REPLY =~ ^[Yy]$ ]]; then
-                reset_main_to_release "$conflict_auto_push"
+                reset_main_to_release "$main_branch" "$release_branch" "$remote_name" "$conflict_auto_push"
             else
                 handle_failure "Reset aborted." "true"
             fi
@@ -158,7 +163,7 @@ handle_branch_diffs() {
         if echo "$diff_message" | grep -q "INFO:"; then
             handle_info "$diff_message"
         elif echo "$diff_message" | grep -q "WARNING:"; then
-            resolve_conflict_options "$diff_message" "$main_branch" "$release_branch" "$CONFLICT_AUTO_PUSH"
+            resolve_conflict_options "$diff_message" "$main_branch" "$release_branch" "$remote_name" "$CONFLICT_AUTO_PUSH"
         fi
     fi
 

@@ -47,7 +47,7 @@ grant_execute_permissions() {
 # Main function to execute the permission granting process
 main() {
     # Get the scripts directory, defaulting to '.github/scripts' if SCRIPTS_DIR environment variable is not set.
-    local scripts_dir=${SCRIPTS_DIR:-".github/scripts"}
+    local scripts_dir="${SCRIPTS_DIR:-".github/scripts"}"
 
     # Check if the scripts directory exists
     check_scripts_directory "$scripts_dir"
