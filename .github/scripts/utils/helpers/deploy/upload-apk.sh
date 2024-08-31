@@ -45,16 +45,15 @@ handle_info() {
 upload_apk() {
     local bot_github_token="$1"
     local github_repository="$2"
-    local current_release_version="$3"
-    local apk_path="$4"
-    local release_id="$5"
+    local apk_path="$3"
+    local release_id="$4"
 
     # Extract repository name and convert to lowercase
     local repo_name="${github_repository#*/}"
     repo_name="${repo_name,,}"
 
-    # Construct the APK name using the repository name and version name
-    local apk_name="${repo_name}-${current_release_version}-release.apk"
+    # Construct the APK name using the repository name
+    local apk_name="${repo_name}-latest-release.apk"
 
     # Log the APK name being uploaded
     handle_info "Uploading $apk_path as $apk_name"
@@ -69,7 +68,7 @@ upload_apk() {
 # Main function to execute the upload apk process
 main() {
     # Define the required environment variables
-    local required_vars=(BOT_GITHUB_TOKEN GITHUB_REPOSITORY CURRENT_RELEASE_VERSION APK_PATH RELEASE_ID)
+    local required_vars=(BOT_GITHUB_TOKEN GITHUB_REPOSITORY APK_PATH RELEASE_ID)
 
     # Validate that required environment variables are set
     check_required_vars "${required_vars[@]}"
@@ -77,13 +76,12 @@ main() {
     # Capture environment variables
     local bot_github_token="$1"
     local github_repository="$2"
-    local current_release_version="$3"
-    local apk_path="$4"
-    local release_id="$5"
+    local apk_path="$3"
+    local release_id="$4"
 
     # Upload the APK file to the GitHub Release Assets
-    upload_apk "$bot_github_token" "$github_repository" "$current_release_version" "$apk_path" "$release_id"
+    upload_apk "$bot_github_token" "$github_repository" "$apk_path" "$release_id"
 }
 
 # Entry point
-main "$BOT_GITHUB_TOKEN" "$GITHUB_REPOSITORY" "$CURRENT_RELEASE_VERSION" "$APK_PATH" "$RELEASE_ID"
+main "$BOT_GITHUB_TOKEN" "$GITHUB_REPOSITORY" "$APK_PATH" "$RELEASE_ID"

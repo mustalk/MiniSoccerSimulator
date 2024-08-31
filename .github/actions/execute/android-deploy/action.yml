@@ -166,6 +166,5 @@ runs:
       env:
         BOT_GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_REPOSITORY: ${{ inputs.github-repository }}
-        CURRENT_RELEASE_VERSION: ${{ env.CURRENT_RELEASE_VERSION }}
         APK_PATH: ${{ env.APK_PATH }} # Have been set from the fastlane deploy lane
         RELEASE_ID: ${{ env.RELEASE_ID }}
