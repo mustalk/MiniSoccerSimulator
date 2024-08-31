@@ -92,16 +92,28 @@ merge_single_commit() {
     local deleted_files="$3"
     local renamed_files="$4"
 
+    # Local variables
+    local last_commit
+    local last_commit_msg
+    local last_commit_hash
+    local last_commit_title
+    local author_date_options
+
     # Get the last commit message.
-    LAST_COMMIT="$(git log -1 --pretty=format:'%H %h %s' "$branch_release")"
-    # Extract commit title.
-    LAST_COMMIT_TITLE="$(echo "$LAST_COMMIT" | cut -d' ' -f3-)"
+    last_commit="$(git log -1 --pretty=format:'%H %h %s' "$branch_release")"
     # Extract commit body.
-    LAST_COMMIT_MSG="$(git log -1 --pretty=format:'%B' "$branch_release")"
+    last_commit_msg="$(git log -1 --pretty=format:'%B' "$branch_release")"
+    # Extract commit hash.
+    last_commit_hash="$(echo "$last_commit" | cut -d' ' -f1)"
+    # Extract commit title.
+    last_commit_title="$(echo "$last_commit" | cut -d' ' -f3-)"
+
+    # Extract commit author info and date from the last commit.
+    author_date_options=$(extract_author_and_date_info "$last_commit_hash")
 
     # Check if the commit message already exists in main.
-    if run_cmd check_commit_message_exists "$LAST_COMMIT_MSG" "$branch_main"; then
-        LAST_COMMIT_MSG="Merge '$branch_release'\n$LAST_COMMIT_MSG"
+    if run_cmd check_commit_message_exists "$last_commit_msg" "$branch_main"; then
+        last_commit_msg="Merge '$branch_release'\n$last_commit_msg"
     fi
 
     # Perform a merge with -X theirs strategy favoring release and create a squash commit with the last release commit message.
@@ -111,19 +123,19 @@ merge_single_commit() {
         handle_deleted_and_renamed_files "$deleted_files" "$renamed_files"
 
         # Create a new commit with the last commit message from release, using a temporary file, to preserve the commit formatting.
-        commit_with_temp_file "$LAST_COMMIT_MSG"
+        commit_with_temp_file "$last_commit_msg" "$author_date_options"
 
         handle_info "Squash merged single commit from \`$branch_release\` into \`$branch_main\`."
 
         # Update commit messages merged for logs.
-        echo "$LAST_COMMIT"
+        echo "$last_commit"
     else
         # Abort merge if in progress.
         if run_cmd git rev-parse -q --verify MERGE_HEAD >/dev/null; then
             run_cmd git merge --abort || true
         fi
         failure_message="The single squash commit merge of \`$branch_release\` into \`$branch_main\` failed! Please resolve manually.\n"
-        failure_message+="Attempted to merge:\n* $LAST_COMMIT_TITLE"
+        failure_message+="Attempted to merge:\n* $last_commit_title"
         handle_failure "$failure_message"
     fi
 }
@@ -141,8 +153,8 @@ merge_multiple_commits() {
     mapfile -t commit_messages < <(gather_commit_messages "$branch_release" "$branch_main")
 
     # Assign array elements to the variables.
-    MERGE_MSG="${commit_messages[0]}"
-    STATUS_MSG="${commit_messages[1]}"
+    merge_msg="${commit_messages[0]}"
+    status_msg="${commit_messages[1]}"
 
     # Perform a standard merge with the gathered commit messages.
     handle_info "Starting a standard merge for branch \`$branch_release\` into \`$branch_main\`."
@@ -152,19 +164,19 @@ merge_multiple_commits() {
         handle_deleted_and_renamed_files "$deleted_files" "$renamed_files"
 
         # Commit the merge with the gathered commit message using a temporary file, to preserve the commit formatting.
-        commit_with_temp_file "$MERGE_MSG"
+        commit_with_temp_file "$merge_msg"
 
         handle_info "Successfully merged multiple commits from \`$branch_release\` into \`$branch_main\`."
 
         # Update commit messages merged for logs.
-        echo "$STATUS_MSG"
+        echo "$status_msg"
     else
         # Abort merge if in progress.
         if run_cmd git rev-parse -q --verify MERGE_HEAD >/dev/null; then
             run_cmd git merge --abort || true
         fi
         failure_message="The multiple commits merge of \`$branch_release\` into \`$branch_main\` failed! Please resolve manually.\n"
-        failure_message+="Attempted to merge:\n$MERGE_MSG"
+        failure_message+="Attempted to merge:\n$merge_msg"
         handle_failure "$failure_message"
     fi
 }
@@ -349,7 +361,7 @@ main() {
     check_commits_up_to_date "$main_branch" "$release_branch" "$remote_name" "$operation_mode"
 
     # Log an informational message indicating the start of the rebase and merge process.
-    handle_info "Starting $SCRIPT_OPERATION_MODE of \`$release_branch\` into \`$main_branch\` ..."
+    handle_info "Starting $operation_mode of \`$release_branch\` into \`$main_branch\` ..."
 
     # Ensure that the working directory is clean before proceeding.
     # This prevents conflicts caused by untracked files or changes in the working directory.

@@ -82,7 +82,7 @@ function update_version_in_file() {
     exec_sed "s/versionPatch = .*/versionPatch = $patch/g" "$file_path"
 
     # Print a message indicating the successful version update to standard error
-    handle_info "INFO: Version updated to $major.$minor.$patch in $file_path."
+    handle_info "Version updated to $major.$minor.$patch in $file_path."
 }
 
 # Main function to execute the version update process

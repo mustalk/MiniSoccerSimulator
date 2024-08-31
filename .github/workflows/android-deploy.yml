@@ -56,6 +56,8 @@ jobs:
   version-bump:
     if: "!startsWith(github.event.head_commit.message, 'chore(release): promote release v')"
     runs-on: ubuntu-latest
+    outputs:
+      next_release_version: ${{ steps.semantic-release.outputs.next_release_version }}
 
     steps:
       # Check out the code from the repository
@@ -117,9 +119,15 @@ jobs:
           ENABLE_ESCAPES: true
           SLACK_FOOTER: ''
 
+  # This job requires the 'version-bump' job to complete before it can run.
+  # Only runs if the following conditions are met:
+  # The commit message does not start with 'chore(release): promote release v' (we ignore semantic-release commits).
+  # The 'next_release_version' output from the 'version-bump' job is not empty (meaning a new release was created).
   deploy:
     needs: version-bump
-    if: "!startsWith(github.event.head_commit.message, 'chore(release): promote release v')"
+    if: |
+      !startsWith(github.event.head_commit.message, 'chore(release): promote release v') &&
+      needs.version-bump.outputs.next_release_version != ''
     runs-on: ubuntu-latest
 
     steps:

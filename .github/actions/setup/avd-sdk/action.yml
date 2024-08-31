@@ -29,6 +29,8 @@ runs:
     # Setup Android SDK
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
+      with:
+        log-accepted-android-sdk-licenses: false
       # Documentation: Sets up Android SDK for building and testing Android apps
       # See: https://github.com/android-actions/setup-android
 

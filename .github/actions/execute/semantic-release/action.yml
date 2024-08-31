@@ -42,6 +42,11 @@ inputs:
     description: 'Path to the Gradle file.'
     required: true
 
+outputs:
+  next_release_version:
+    description: 'The version number of the next release.'
+    value: ${{ steps.version-bump.outputs.next_release_version }}
+
 runs:
   using: 'composite'
   steps:
@@ -127,6 +132,17 @@ runs:
         NEXT_RELEASE_VERSION: ${{ env.NEXT_RELEASE_VERSION }}
         RELEASE_NOTES: ${{ env.RELEASE_NOTES }}
         ASSETS: ${{ env.ASSETS }}
+
+    # Sets the 'next_release_version' output variable for the composite action.
+    # This step captures the 'NEXT_RELEASE_VERSION' environment variable, which is set by the 'update-version.sh' script
+    # during the semantic release process if a new release is created.
+    # The output variable is then used in subsequent jobs to determine if a deployment is necessary.
+    - name: Set next release version output
+      if: always()
+      id: version-bump
+      run: |
+        echo "next_release_version=${{ env.NEXT_RELEASE_VERSION }}" >> $GITHUB_OUTPUT
+      shell: bash
 
     # Runs the GPG cleanup script to remove the GPG agent and key.
     - name: Cleanup GPG
