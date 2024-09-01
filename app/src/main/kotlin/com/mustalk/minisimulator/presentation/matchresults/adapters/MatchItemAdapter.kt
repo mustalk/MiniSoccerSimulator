@@ -9,6 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.mustalk.minisimulator.R
 import com.mustalk.minisimulator.databinding.MatchItemBinding
 import com.mustalk.minisimulator.domain.entities.matches.Match
+import com.mustalk.minisimulator.presentation.matchresults.adapters.ui.MatchItemViews
 
 /**
  * Adapter for individual match items

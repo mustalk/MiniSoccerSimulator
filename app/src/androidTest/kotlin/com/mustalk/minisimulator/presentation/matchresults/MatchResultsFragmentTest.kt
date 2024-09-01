@@ -1,7 +1,9 @@
 package com.mustalk.minisimulator.presentation.matchresults
 
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
+import androidx.test.espresso.contrib.RecyclerViewActions
 import androidx.test.espresso.matcher.ViewMatchers.hasMinimumChildCount
 import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.isRoot
@@ -9,6 +11,7 @@ import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.MediumTest
 import com.mustalk.minisimulator.R
+import com.mustalk.minisimulator.presentation.matchresults.adapters.MatchResultAdapter
 import com.mustalk.minisimulator.utils.FakeData
 import com.mustalk.minisimulator.utils.launchFragmentInHiltContainer
 import com.mustalk.minisimulator.utils.waitFor
@@ -77,6 +80,26 @@ class MatchResultsFragmentTest {
 
             // At least the round item recyclerView has at least two match items
             onView(withId(R.id.matchesRecyclerView)).check(matches(hasMinimumChildCount(2)))
+        }
+
+    /**
+     * Test to verify that clicking a match item displays the RoundWinnersDialog.
+     */
+    @Test
+    fun testClickingMatchItemDisplaysRoundWinnersDialog() =
+        runTest {
+            launchFragmentWithFakeData()
+
+            // Wait for the RecyclerView to be displayed
+            onView(isRoot()).perform(waitFor(300))
+
+            // Click on the first match item
+            onView(
+                withId(R.id.resultsRecyclerView)
+            ).perform(RecyclerViewActions.actionOnItemAtPosition<MatchResultAdapter.RoundViewHolder>(0, click()))
+
+            // Verify that the winnersRecyclerView on the RoundWinnersDialog is displayed
+            onView(withId(R.id.winnersRecyclerView)).check(matches(isDisplayed()))
         }
 
     /**

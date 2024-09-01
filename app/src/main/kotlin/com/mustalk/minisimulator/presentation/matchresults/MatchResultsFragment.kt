@@ -16,6 +16,7 @@ import com.mustalk.minisimulator.domain.usecases.teams.GetTeamSizeUseCase
 import com.mustalk.minisimulator.presentation.main.MainViewModel
 import com.mustalk.minisimulator.presentation.matchresults.adapters.MatchResultAdapter
 import com.mustalk.minisimulator.presentation.matchresults.adapters.OnMatchClickListener
+import com.mustalk.minisimulator.presentation.matchresults.dialogs.RoundWinnersDialogHelper
 import com.mustalk.minisimulator.presentation.utils.ViewUtils
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -45,6 +46,9 @@ class MatchResultsFragment :
 
     @Inject
     lateinit var getTeamSizeUseCase: GetTeamSizeUseCase
+
+    @Inject
+    lateinit var roundWinnersDialogHelper: RoundWinnersDialogHelper
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -106,11 +110,13 @@ class MatchResultsFragment :
         }
     }
 
+    // Handle match click events
     override fun onMatchClick(
         roundMatches: List<Match>,
         roundNumber: Int,
     ) {
-        ViewUtils.showToast(requireContext(), "Round $roundNumber")
+        // Show the round winners dialog when a match is clicked
+        roundWinnersDialogHelper.showRoundWinnersDialog(requireContext(), roundMatches, roundNumber)
     }
 
     // Toggle the visibility of the empty view and recyclerView based on the isEmpty value

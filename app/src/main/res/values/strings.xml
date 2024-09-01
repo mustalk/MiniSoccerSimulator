@@ -12,6 +12,7 @@
 
     <string name="title_round_match_results">Round Match Results</string>
     <string name="title_group_standings">Group Standings</string>
+    <string name="title_dialog_round_winners">Round winners</string>
 
     <string name="empty_view_text_no_match_data">No match data available yet, hit the</string>
     <string name="empty_view_text_no_standings_data">No standings data available yet, hit the</string>
@@ -27,6 +28,11 @@
 
     <string name="label_position_text">%1$d</string>
     <string name="label_team_name">Team</string>
+
+    <string name="label_dialog_match_winner_is">Winner is:</string>
+    <string name="label_dialog_draw">It\'s a Draw!</string>
+    <string name="label_dialog_match">Match %1$d</string>
+    <string name="label_dialog_round">Round %1$d</string>
 
     <string name="column_played">Pld</string>
     <string name="column_wins">W</string>
