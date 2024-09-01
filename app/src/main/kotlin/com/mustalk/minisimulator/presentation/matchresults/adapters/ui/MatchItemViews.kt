@@ -1,4 +1,4 @@
-package com.mustalk.minisimulator.presentation.matchresults.adapters
+package com.mustalk.minisimulator.presentation.matchresults.adapters.ui
 
 import android.widget.ImageView
 import android.widget.TextView
