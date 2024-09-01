@@ -1,3 +1,9 @@
+## [1.1.0](https://github.com/mustalk/MiniSoccerSimulator/compare/v1.0.0...v1.1.0) (2024-09-01)
+
+### Features
+
+* implement round winners dialog ([#20](https://github.com/mustalk/MiniSoccerSimulator/issues/20)) ([edcef39](https://github.com/mustalk/MiniSoccerSimulator/commit/edcef39461ca223b7be9ad2e5f985a65d6a35e12))
+
 ## 1.0.0 (2024-08-29)
 
 ### Features
