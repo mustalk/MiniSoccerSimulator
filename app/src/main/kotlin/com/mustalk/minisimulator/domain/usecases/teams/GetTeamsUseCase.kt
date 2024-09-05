@@ -5,9 +5,9 @@ import com.mustalk.minisimulator.domain.standings.GroupStandings
 import javax.inject.Inject
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Use case for retrieving the list of teams from the [GroupStandings].
+ *
+ * @author by MusTalK on 16/07/2024
  */
 class GetTeamsUseCase
     @Inject

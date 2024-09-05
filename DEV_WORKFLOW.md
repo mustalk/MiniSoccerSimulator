@@ -93,6 +93,102 @@ We use [Conventional Commits](https://www.conventionalcommits.org/) for writing 
         - Deploys the app to Firebase App Distribution (and easily to Google Play Store when we're ready to publish).
         - Uploads the APK as a release asset on GitHub.
 
+### Workflow Overview Graph
+
+```mermaid
+graph LR
+    subgraph "Feature Development"
+        A[Feature Branch] --> B{Pull Request}
+    end
+    B --> |Approved| C[Squash Merge to Release]
+    C --> D{Promote Release to Main}
+    D --> |Success| F{Generate Release Notes}
+    subgraph "Prepare Release"
+        F --> G{Bump Version}
+        G --> K{Create GitHub Release}
+    end
+    K --> H{Sync Release with Main}
+    H --> L{Deploy}
+    L --> |to| I[Firebase / Play Store]
+    L --> |to| J[Github Release]
+```
+
+### Promote Release to Main Graph
+
+```mermaid
+flowchart LR
+    A[Start] --> B{Commits Up-to-date?}
+    B --> |Yes| S[Exit and Log Success]
+    B --> |No| D[Start Rebase/Merge Process]
+
+    D --> |Evaluate| E{Fast-Forward<br />Merge Possible?}
+    E --> |No| F[Check Number of Commits]
+
+    %% Multiple Commits Path
+    F --> G{Multiple Commits?}
+    G --> |Yes| H[Customize Commit Message]
+    H --> |Standard Merge| I[Multiple Commits]
+    I --> J{Standard Merge Successful?}
+
+    %% Single Commit Path
+    G --> |No| K[Get Last Commit Message]
+    K --> |Squash Merge| L[Single Commit]
+    L --> J
+
+    %% Merge Success Path
+    J --> |Yes| M[Handle Successful Merge]
+    J --> |No| N[Abort and Log Failure]
+    N --> V[Notify Process Outcome]
+
+    %% Fast-Forward Path
+    E --> |Yes| O[Rebase Release onto Main]
+    O --> P{Rebase Successful?}
+    P --> |Yes| Q[Fast-Forward Merge]
+    P --> |No| N
+
+    Q --> R{Fast-Forward<br />Merge Successful?}
+    R --> |Yes| M
+    R --> |No| N
+
+    %% Final Steps
+    M --> T[Push to Remote]
+    T --> U[Check Branch Differences]
+    U --> S[Exit and Log Success]
+    S --> V[Notify Process Outcome]
+
+    V --> Z[End]
+```
+
+### Sync Release with Main Graph
+
+```mermaid
+flowchart LR
+    A[Start] --> B{Commits Up-to-Date?}
+
+    %% Up-to-Date Path
+    B --> |Yes| C[Exit and Log Success]
+
+    %% Not Up-to-Date Path
+    B --> |No| D[Check Branch Differences]
+    D --> E{Branch Diffs Result}
+
+    %% Handle Branch Differences
+    E --> |Info| F{Start Sync Process}
+    E --> |Warning| G[Abort and Log Failure]
+    F --> |Success| H[Push Rebased Branch]
+    F --> |Failure| G
+
+    %% Sync Process
+    H --> C
+
+    %% Failure Paths
+    G --> I[Notify Process Outcome]
+    C --> I
+
+    %% Final Steps
+    I --> J[End]
+```
+
 ## Handling Merge Conflicts
 
 - **Automated Workflow:** The automated rebase and merge process is designed to handle straightforward merges efficiently. It will only perform
@@ -171,6 +267,8 @@ If you prefer using shortcuts, you can configure keymaps for the installed plugi
 
 1. Go to **`File` > `Settings` > `Keymap`**.
 2. Search for **`Ktlint`** or **`Spotless`** and assign your desired shortcuts to the available actions.
+
+These tools help improve code quality by enforcing consistent code style, reduce code review time, and contribute to a more maintainable and consistent codebase.
 
 ## Important Notes
 

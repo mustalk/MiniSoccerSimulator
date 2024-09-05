@@ -12,9 +12,9 @@ import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Unit tests for [GetTeamSizeUseCase].
+ *
+ * @author by MusTalK on 16/07/2024
  */
 
 @RunWith(JUnit4::class)

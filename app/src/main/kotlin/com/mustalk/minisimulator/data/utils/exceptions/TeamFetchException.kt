@@ -1,9 +1,9 @@
 package com.mustalk.minisimulator.data.utils.exceptions
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Custom exception to represent errors during team fetching
+ *
+ * @author by MusTalK on 16/07/2024
  */
 
 class TeamFetchException(

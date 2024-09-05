@@ -6,7 +6,7 @@ import com.mustalk.minisimulator.domain.entities.teams.Team
 import com.mustalk.minisimulator.domain.entities.teams.TeamStats
 
 /**
- *
+ * Fake team and match data for testing
  *
  * @author by MusTalK on 21/07/2024
  */

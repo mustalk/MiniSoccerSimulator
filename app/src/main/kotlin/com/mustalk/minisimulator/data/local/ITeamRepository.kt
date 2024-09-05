@@ -3,11 +3,11 @@ package com.mustalk.minisimulator.data.local
 import com.mustalk.minisimulator.domain.entities.teams.Team
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * An interface defining the contract for accessing and managing [Team] data.
  *
  * Provides a method to asynchronously fetch a list of [Team] objects.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 interface ITeamRepository {
     /**

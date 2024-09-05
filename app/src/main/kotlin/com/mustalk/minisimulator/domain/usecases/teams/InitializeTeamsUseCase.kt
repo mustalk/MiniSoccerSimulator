@@ -4,9 +4,9 @@ import com.mustalk.minisimulator.domain.standings.GroupStandings
 import javax.inject.Inject
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Use case for initializing the teams within the [GroupStandings].
+ *
+ * @author by MusTalK on 16/07/2024
  */
 class InitializeTeamsUseCase
     @Inject

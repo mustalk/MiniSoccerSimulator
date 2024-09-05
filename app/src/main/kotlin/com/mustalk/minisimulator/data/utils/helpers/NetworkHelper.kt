@@ -17,9 +17,9 @@ import retrofit2.converter.gson.GsonConverterFactory
 import java.net.HttpURLConnection.HTTP_OK
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A utility object for network-related operations.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 
 object NetworkHelper {

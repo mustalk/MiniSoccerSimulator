@@ -22,9 +22,9 @@ import org.mockito.MockitoAnnotations
 import org.mockito.kotlin.whenever
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Unit tests for [AssetTeamRepository].
+ *
+ * @author by MusTalK on 16/07/2024
  */
 @RunWith(JUnit4::class)
 class AssetTeamRepositoryTest {

@@ -1,9 +1,9 @@
 package com.mustalk.minisimulator.data.utils
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Object containing constant values used throughout the application.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 object DataConstants {
     // Placeholder URL

@@ -9,11 +9,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A repository that fetches [Team] data from a remote API.
  *
  * This repository uses Retrofit to interact with the API and provides a list of [Team] objects.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 @Singleton
 class RemoteTeamRepository

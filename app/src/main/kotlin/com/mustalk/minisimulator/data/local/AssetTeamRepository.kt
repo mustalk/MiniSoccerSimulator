@@ -12,12 +12,12 @@ import java.io.IOException
 import javax.inject.Inject
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A repository that provides a list of [Team] objects from assets.
  *
  * This repository reads team data from a JSON file located in the assets folder
  * and parses it into a list of Team objects.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 class AssetTeamRepository
     @Inject

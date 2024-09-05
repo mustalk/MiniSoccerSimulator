@@ -6,9 +6,9 @@ import com.mustalk.minisimulator.domain.utils.TeamStatsHelper
 import javax.inject.Inject
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A default implementation of [ITeamStatsUpdater] that updates team statistics based on match results.
+ *
+ * @author by MusTalK on 16/07/2024
  **/
 class TeamStatsUpdater
     @Inject
