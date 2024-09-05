@@ -4,9 +4,9 @@ import com.mustalk.minisimulator.R
 import com.mustalk.minisimulator.domain.entities.teams.Team
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A utility object for retrieving team logos and mapping them to teams.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 object TeamLogoHelper {
     /**

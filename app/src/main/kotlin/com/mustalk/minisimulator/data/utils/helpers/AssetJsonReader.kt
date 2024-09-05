@@ -5,9 +5,9 @@ import java.io.IOException
 import java.io.InputStream
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A utility object for reading JSON files from the assets folder.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 object AssetJsonReader {
     /**

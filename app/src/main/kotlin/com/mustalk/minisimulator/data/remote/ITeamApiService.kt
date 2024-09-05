@@ -5,9 +5,9 @@ import com.mustalk.minisimulator.domain.entities.teams.Team
 import retrofit2.http.GET
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * An interface defining the API endpoints for fetching [Team] data.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 interface ITeamApiService {
     /**

@@ -1,8 +1,6 @@
 package com.mustalk.minisimulator.data.utils
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A sealed class representing the result of an API call.
  *
  * This sealed class provides two possible outcomes for an API call:
@@ -10,6 +8,8 @@ package com.mustalk.minisimulator.data.utils
  * - [Error]: Indicates an error occurred during the API call, wrapping the exception encountered.
  *
  * @param T The type of data expected in the API response for successful calls.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 sealed class ApiResult<out T> {
     /**

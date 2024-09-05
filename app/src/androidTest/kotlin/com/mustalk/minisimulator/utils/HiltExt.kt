@@ -1,9 +1,5 @@
 package com.mustalk.minisimulator.utils
 
-/**
- * @author by MusTalK on 15/07/2024
- */
-
 import android.content.ComponentName
 import android.content.Intent
 import android.os.Bundle
@@ -23,6 +19,8 @@ import com.mustalk.minisimulator.R
  * As a workaround, use this function that is equivalent. It requires you to add
  * [HiltTestActivity] in the debug folder and include it in the debug AndroidManifest.xml file
  * as can be found in this project.
+ *
+ * @author by MusTalK on 15/07/2024
  */
 inline fun <reified T : Fragment> launchFragmentInHiltContainer(
     fragmentArgs: Bundle? = null,

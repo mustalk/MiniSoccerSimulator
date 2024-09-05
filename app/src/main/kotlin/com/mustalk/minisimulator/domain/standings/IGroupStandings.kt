@@ -4,10 +4,10 @@ import com.mustalk.minisimulator.domain.entities.matches.Match
 import com.mustalk.minisimulator.domain.entities.teams.Team
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Defines a contract for managing the standings
  * Provides methods for accessing team information, match results, and match simulations.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 interface IGroupStandings {
     /**

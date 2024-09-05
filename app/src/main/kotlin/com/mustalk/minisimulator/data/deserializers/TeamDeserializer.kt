@@ -10,13 +10,13 @@ import com.mustalk.minisimulator.domain.entities.teams.TeamStats
 import java.lang.reflect.Type
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A custom deserializer for a list of [Team] objects.
  *
  * This deserializer handles the deserialization of JSON arrays into a list of [Team] objects.
  * It iterates through the JSON array, extracts relevant data for each team, and creates a list
  * of [Team] instances.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 
 class TeamDeserializer : JsonDeserializer<List<Team>> {

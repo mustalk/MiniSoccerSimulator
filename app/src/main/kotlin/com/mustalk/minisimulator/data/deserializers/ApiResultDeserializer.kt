@@ -8,8 +8,6 @@ import com.mustalk.minisimulator.data.utils.ApiResult
 import java.lang.reflect.Type
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * A custom deserializer for the [ApiResult] class.
  *
  * This deserializer handles the deserialization of JSON responses into [ApiResult] objects,
@@ -18,6 +16,8 @@ import java.lang.reflect.Type
  *
  * @param T The type of data contained in the [ApiResult].
  * @property dataDeserializer The deserializer for the data type [T].
+ *
+ * @author by MusTalK on 16/07/2024
  */
 
 class ApiResultDeserializer<T>(

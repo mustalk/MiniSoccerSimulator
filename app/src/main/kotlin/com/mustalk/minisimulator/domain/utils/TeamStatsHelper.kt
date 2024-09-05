@@ -1,9 +1,9 @@
 package com.mustalk.minisimulator.domain.utils
 
 /**
- * @author by MusTalK on 16/07/2024
- *
  * Helper object for calculating team statistics.
+ *
+ * @author by MusTalK on 16/07/2024
  */
 object TeamStatsHelper {
     /**
